@@ -316,11 +316,16 @@ function prompt_newt_setup () {
 
         # Segment creation                  # {{{1
 
-        MODE_INDICATOR_I="%731(l,,)"
-        MODE_INDICATOR_N="%732(l,,) %F{255}NORMAL%f "
-        MODE_INDICATOR_C="%733(l,,) %F{198}COMMAND%f "
-        rsegment_$0 '${MODE_INDICATOR_PROMPT}' bg: fg:yellow raw:1
-        setopt promptsubst
+        if [[ $+MODE_INDICATOR_PROMPT ]]; then
+            local indicator
+            if [[ -o prompt_subst ]]; then
+                indicator='${MODE_INDICATOR_PROMPT}'
+            else
+                indicator="$MODE_INDICATOR_PROMPT"
+            fi
+            [[ -n $indicator ]] && \
+                rsegment_$0 $indicator bg: fg:yellow raw:1
+        fi
 
         local bg=
         local clob; zstyle -s ':prompt-theme:newt' clobber clob
@@ -331,9 +336,10 @@ function prompt_newt_setup () {
             rsegment_$0 ${vcs_info_msg_0_} bg:235 fg:
         fi
 
-        rsegment_$0 'flour' fg: bg:
-        rsegment_$0 'w%F{179}a%K{cyan}t%fe%kr' bg:blue fg:red
-        rsegment_$0 'salt' bg:
+        #rsegment_$0 'flour' fg: bg:
+        #rsegment_$0 'w%F{179}a%K{cyan}t%fe%kr' bg:blue fg:red
+        #rsegment_$0 'salt' bg:
+        rsegment_$0 '%*' bg:240 fg:253
 
         # Remove a final space, due to ZLE_RPROMPT_INDENT=1
         [[ ${ZLE_RPROMPT_INDENT:-1} = 1 ]] && res=${res% }
