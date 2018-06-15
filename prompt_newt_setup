@@ -1,6 +1,6 @@
 emulate -L zsh; setopt extendedglob
 
-# Preview / Help                    # {{{1
+# Preview / Help {{{1
 
 function prompt_newt_preview () {
     local _zsh_theme_preview_euid
@@ -43,8 +43,261 @@ Configuration
 EOF
 }
 
+# Add an rsegment {{{1
+function prompt_newt_rsegment () {
+    setopt local_options extended_glob
+    local str="$1"
+    local bg=none
+    local fg=none
+    local raw=0
+    for arg ($@) {
+        [[ $arg = bg:*  ]] && bg=${arg#*:}
+        [[ $arg = fg:*  ]] && fg=${arg#*:}
+        [[ $arg = raw:* ]] && raw=${arg#*:}
+    }
 
-# Main Prompt Setup                 # {{{1
+    # This sets segm
+    local segm
+    prompt_newt_set_rsegment_sep "${bg}" "${fg}"
+
+    local fseg
+    if (( $raw )); then
+        fseg=${str}
+    else
+        zformat -f fseg "${str}" \
+            k:$(prompt_newt_bg_color $prompt_b0) \
+            f:$(prompt_newt_fg_color $prompt_f0)
+        zstyle -t 'prompt-theme:newt:default' compact \
+            || [ -z $fseg ] || fseg=" $fseg "
+    fi
+    segm+=$fseg
+    function make_truecolor_escape () {
+        local n
+        [[ $1 = F ]] && n=38 || n=48
+        shift;
+        printf '%%{\x1b[%d;2;%d;%d;%dm%%}' $n "$@"
+    }
+    # Change %F{RRR;GGG;BBB} to TrueColor escapes
+    segm="${segm//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
+            make_truecolor_escape $match[@])}"
+
+    res+=$segm
+}
+
+# + Determine how to draw the separator for this segment {{{1
+function prompt_newt_set_rsegment_sep () {
+    local b1="$1" f1="$2"
+    typeset -g segm prompt_b0 prompt_f0
+    #print "$0:   [$prompt_b0][$prompt_f0] [$b1][$f1]"
+
+    local segment_separator=$'\ue0b0'  # 
+    local thin_separator=$'\ue0b1'     # 
+    local rsegment_separator=$'\ue0b2' # 
+    local rthin_separator=$'\ue0b3'    # 
+
+    [[ $b1 = none ]] && b1=$prompt_b0
+    [[ $f1 = none ]] && f1=$prompt_f0
+
+    local sep=
+    if [[ $prompt_b0 = $b1 ]]; then
+        sep+="$(prompt_newt_bg_color $prompt_b0)$(prompt_newt_fg_color $f1)$rthin_separator"
+    else
+        #print "old[$prompt_b0, $prompt_f0] -> new[$b1, $f1] ff[$(prompt_newt_fg_color bg:$bg1)]"
+        sep+="$(prompt_newt_fg_color bg:$b1)$rsegment_separator"
+        sep+="$(prompt_newt_bg_color $b1)"
+        if [[ $f1 != $(prompt_newt_fg_color bg:$b1) ]]; then
+            sep+="$(prompt_newt_fg_color $f1)"
+        fi
+    fi
+
+    segm=$sep
+    prompt_b0="$b1"
+    prompt_f0="$f1"
+}
+
+# + Resolve color to prompt format escape {{{1
+function prompt_newt_bg_color () {
+    local c
+    case $1 in
+        none) c="%K{198}[none]%k" ;;  # Shouldn't happen
+        '')
+            c="%k"
+            ;;
+        fg:*)
+            c=${1#*:}
+            [[ -z $c ]] && c=$(get_terminal_foreground)
+            c="%K{$c}"
+            ;;
+        *)
+            c="%K{$1}"
+            ;;
+    esac
+    print -rn $c
+}
+
+function prompt_newt_fg_color () {
+    local c
+    case $1 in
+        none) c="%F{198}[none]%f" ;;  # Shouldn't happen
+        '')
+            c="%f"
+            ;;
+        bg:*)
+            c=${1#*:}
+            #c="%F{199}[$c]%f"
+            [[ -z $c ]] && c=$(get_terminal_background)
+            c="%F{$c}"
+            ;;
+        *)
+            c="%F{$1}"
+            ;;
+    esac
+    print -rn $c
+}
+
+# + Get bg/fg color of terminal {{{1
+# TODO Use escape sequence to query terminal for color, see
+# http://thrysoee.dk/xtermcontrol/
+# https://github.com/JessThrysoee/xtermcontrol
+# https://superuser.com/questions/157563/programmatic-access-to-current-xterm-background-color
+function get_terminal_background () {
+    local color
+
+    zstyle -s 'prompt-theme' terminal-background color
+    : ${color:=${COLORFGBG#*;}}
+    : ${color:=0}
+    print -n $color
+}
+
+function get_terminal_foreground () {
+    local color
+
+    zstyle -s 'prompt-theme' terminal-foreground color
+    : ${color:=${COLORFGBG%%;*}}
+    : ${color:=15}
+    print -n $color
+}
+
+
+# Prompt precmd hook {{{1
+# It must be named like this, or else promptinit won't work properly when
+# switching themes. It doesn't call `prompt restore` to clean up.
+function prompt_newt_precmd () {
+    vcs_info
+
+    # zstyle ":prompt-theme:newt:default' ps1
+    local -a ps1 rps1
+
+    # The result prompt string being built
+    local res=
+    # These are state variables used in segment funcs
+    local prompt_b0= prompt_f0=
+
+
+    # + Prompt Segments {{{1
+
+    if [[ $+MODE_INDICATOR_PROMPT ]]; then
+        local indicator
+        if [[ -o prompt_subst ]]; then
+            indicator='${MODE_INDICATOR_PROMPT}'
+        else
+            indicator="$MODE_INDICATOR_PROMPT"
+        fi
+        [[ -n $indicator ]] && \
+            prompt_newt_rsegment $indicator bg: fg:yellow raw:1
+    fi
+
+    local bg=
+    local clob; zstyle -s ':prompt-theme:newt' clobber clob
+    zstyle -d ':prompt-theme:newt' clobber
+    [[ -n $clob ]] && bg="160"
+    if [[ -n ${vcs_info_msg_0_} ]]; then
+        rps1+="$bg${vcs_info_msg_0_}%k%f"
+        prompt_newt_rsegment ${vcs_info_msg_0_} bg:235 fg:
+    fi
+
+    #prompt_newt_rsegment 'flour' fg: bg:
+    #prompt_newt_rsegment 'w%F{179}a%K{cyan}t%fe%kr' bg:blue fg:red
+    #prompt_newt_rsegment 'salt' bg:
+    prompt_newt_rsegment '%*' bg:240 fg:253
+
+    # Remove a final space, due to ZLE_RPROMPT_INDENT=1
+    [[ ${ZLE_RPROMPT_INDENT:-1} = 1 ]] && res=${res% }
+
+    RPS1="${res}%b%E%k%f"
+    PS1="%F{5}[%F{2}%n%F{5}] %F{3}%3~%f%# "
+}
+
+
+# VCS_Info hooks for git {{{1
+
+# + $GITDIR {{{1
+function +vi-git-show-gitdir () {
+    local -a inner
+    if (( $+GIT_DIR )); then
+        () {
+            # See if we're in a shadowed repository
+            local GIT_DIR GIT_WORK_TREE
+            local verify gitdir
+            verify=$(git rev-parse --verify HEAD 2> /dev/null)
+            gitdir=$(git rev-parse --git-dir 2> /dev/null)
+            inner=($verify $gitdir)
+        }
+
+        local verify=$(git rev-parse --verify HEAD 2> /dev/null)
+        if [[ -n ${inner[1]} && ${inner[1]} != $verify ]]; then
+            # GIT_DIR is shadowing a different repo. This can be
+            # very confusing! Stash a flag to trigger an alert.
+            zstyle ':prompt-theme:newt' clobber "${inner[2]:a}"
+        fi
+
+        local gdir=$'\u2261'"${GIT_DIR/#$HOME/~}"$'\u2261'
+        hook_com[branch]="%F{11}$gdir%f %F{15}${hook_com[branch]}"
+    fi
+}
+
+# + Tracking remote branch? {{{1
+function +vi-git-remotebranch () {
+    local remote
+
+    # Are we on a remote-tracking branch?
+    remote=${$(git rev-parse --verify ${hook_com[branch_orig]}@{upstream} \
+        --symbolic-full-name 2>/dev/null)#refs/remotes/}
+
+    # The first test will show a tracking branch whenever there is one. The
+    # second test, however, will only show the remote branch's name if it
+    # differs from the local one.
+    #if [[ -n ${remote} ]] ; then
+    if [[ -n ${remote} && ${remote#*/} != ${hook_com[branch_orig]} ]] ; then
+        hook_com[branch]+="%F{34}"$'\u00A4'"${remote}"
+    fi
+}
+
+# + New untracked files? {{{1
+function +vi-git-untracked () {
+    if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
+        && git status --porcelain | grep -m 1 '^??' &>/dev/null
+    then
+        hook_com[misc]+='%F{14}?'
+    fi
+}
+
+# + Ahead / behind of upstream? {{{1
+function +vi-git-st () {
+    local b; b="${hook_com[branch_orig]}@{upstream}"
+
+    local ahead;  ahead=$(git  rev-list $b..HEAD 2>/dev/null | wc -l)
+    local behind; behind=$(git rev-list HEAD..$b 2>/dev/null | wc -l)
+
+    local -a gitstatus
+    (( $ahead ))  && gitstatus+=( "+${ahead}" )
+    (( $behind )) && gitstatus+=( "-${behind}" )
+
+    hook_com[misc]+="%F{139}${(j:/:)gitstatus}"
+}
+
+
+# Main Prompt Setup {{{1
 
 function prompt_newt_setup () {
     autoload -Uz add-zsh-hook
@@ -56,13 +309,14 @@ function prompt_newt_setup () {
     #zstyle ':vcs_info:*' enable git cvs svn bzr hg
     #zstyle ':vcs_info:*+*:*' debug true
 
+    # + Styling {{{1
+
     zstyle ':vcs_info:git:*' check-for-changes true
     zstyle ':vcs_info:git*'  stagedstr     "%F{10}+"
     zstyle ':vcs_info:git*'  unstagedstr   "%F{11}!"
     zstyle ':vcs_info:*'     formats       '%m%c%u%f[%b%f]'
     zstyle ':vcs_info:*'     actionformats '%F{12}[%b|%a]%f'
 
-    # VCS_Info hooks                    # {{{1
     zstyle ':vcs_info:git*+set-message:*' hooks \
         git-show-gitdir \
         git-remotebranch \
@@ -70,7 +324,7 @@ function prompt_newt_setup () {
         git-untracked \
         # ∴
 
-    # Target setup is:                  # {{{1
+    # VCS Info TODO - Target setup is: {{{2
     # -   ZSH_THEME_GIT_PROMPT_PREFIX=" "
     # -   ZSH_THEME_GIT_PROMPT_SUFFIX=
     # *%C ZSH_THEME_GIT_PROMPT_CLEAN=
@@ -79,80 +333,15 @@ function prompt_newt_setup () {
     #  %c ZSH_THEME_GIT_PROMPT_STAGED="%{$fg_bold[green]%}●"
     #  %u ZSH_THEME_GIT_PROMPT_UNSTAGED="%{$fg_bold[yellow]%}●"
     # *%T ZSH_THEME_GIT_PROMPT_UNTRACKED="%{$fg_bold[red]%}●"
-    # () {
+    #
+    # Maybe:
     #     misc="%A/%B %T"  # Presently
     #     zstyle ':vcs_info:*'     formats       ' %m%c%u%T%C%f[%b%f]'
     #     # %D: GIT_DIR; %W: GIT_WORK_TREE; %b: branch; %R: remote
     #     zstyle ':vcs_info:git:*' branchformat  '%D%b%R'
     #     zstyle ':vcs_info:git:*' set-branch-format
 
-    # $GITDIR                           # {{{1
-    function +vi-git-show-gitdir () {
-        local -a inner
-        if (( $+GIT_DIR )); then
-            () {
-                # See if we're in a shadowed repository
-                local GIT_DIR GIT_WORK_TREE
-                local verify gitdir
-                verify=$(git rev-parse --verify HEAD 2> /dev/null)
-                gitdir=$(git rev-parse --git-dir 2> /dev/null)
-                inner=($verify $gitdir)
-            }
-
-            local verify=$(git rev-parse --verify HEAD 2> /dev/null)
-            if [[ -n ${inner[1]} && ${inner[1]} != $verify ]]; then
-                # GIT_DIR is shadowing a different repo. This can be
-                # very confusing! Stash a flag to trigger an alert.
-                zstyle ':prompt-theme:newt' clobber "${inner[2]:a}"
-            fi
-
-            local gdir=$'\u2261'"${GIT_DIR/#$HOME/~}"$'\u2261'
-            hook_com[branch]="%F{11}$gdir%f %F{15}${hook_com[branch]}"
-        fi
-    }
-
-    # Tracking remote branch?           # {{{1
-    function +vi-git-remotebranch () {
-        local remote
-
-        # Are we on a remote-tracking branch?
-        remote=${$(git rev-parse --verify ${hook_com[branch_orig]}@{upstream} \
-            --symbolic-full-name 2>/dev/null)#refs/remotes/}
-
-        # The first test will show a tracking branch whenever there is one. The
-        # second test, however, will only show the remote branch's name if it
-        # differs from the local one.
-        #if [[ -n ${remote} ]] ; then
-        if [[ -n ${remote} && ${remote#*/} != ${hook_com[branch_orig]} ]] ; then
-            hook_com[branch]+="%F{34}"$'\u00A4'"${remote}"
-        fi
-    }
-
-    # New untracked files?              # {{{1
-    function +vi-git-untracked () {
-        if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
-            && git status --porcelain | grep -m 1 '^??' &>/dev/null
-        then
-            hook_com[misc]+='%F{14}?'
-        fi
-    }
-
-    # Ahead / behind of upstream?       # {{{1
-    function +vi-git-st () {
-        local b; b="${hook_com[branch_orig]}@{upstream}"
-
-        local ahead;  ahead=$(git  rev-list $b..HEAD 2>/dev/null | wc -l)
-        local behind; behind=$(git rev-list HEAD..$b 2>/dev/null | wc -l)
-
-        local -a gitstatus
-        (( $ahead ))  && gitstatus+=( "+${ahead}" )
-        (( $behind )) && gitstatus+=( "-${behind}" )
-
-        hook_com[misc]+="%F{139}${(j:/:)gitstatus}"
-    }
-
-
-    # : ${ZLE_RPROMPT_INDENT=-1}        # {{{1
+    # : ${ZLE_RPROMPT_INDENT=-1}  # {{{2
     # Default is 1, which leaves a space after rprompt. But it's the
     # only reliable setting. And, with the %E format, this won't be
     # noticed because %E *does* color the last cell properly!
@@ -166,190 +355,7 @@ function prompt_newt_setup () {
     # adding another space at the end of PS1, but display issues abound.
     # XXX Is there a better fix?
 
-
-    # Prompt segment drawing            # {{{1
-
-    # TODO Use escape sequence to query terminal for color, see
-    # http://thrysoee.dk/xtermcontrol/
-    # https://github.com/JessThrysoee/xtermcontrol
-    # https://superuser.com/questions/157563/programmatic-access-to-current-xterm-background-color
-    function get_terminal_background () {
-        local color
-
-        zstyle -s 'prompt-theme' terminal-background color
-        : ${color:=${COLORFGBG#*;}}
-        : ${color:=0}
-        print -n $color
-    }
-    function get_terminal_foreground () {
-        local color
-
-        zstyle -s 'prompt-theme' terminal-foreground color
-        : ${color:=${COLORFGBG%%;*}}
-        : ${color:=15}
-        print -n $color
-    }
-
-    # It must be named like this, or else promptinit won't work properly when
-    # switching themes. It doesn't call `prompt restore` to clean up.
-    function prompt_newt_precmd () {    # {{{1
-        vcs_info
-
-        # zstyle ":prompt-theme:newt:default' ps1
-        local -a ps1 rps1
-
-        local res=
-        b0= f0=
-
-        local segment_separator=$'\ue0b0'  # 
-        local thin_separator=$'\ue0b1'     # 
-        local rsegment_separator=$'\ue0b2' # 
-        local rthin_separator=$'\ue0b3'    # 
-
-        function rsegment_$0 () {           # {{{1
-            setopt local_options extended_glob
-            local str="$1"
-            local bg=none
-            local fg=none
-            local raw=0
-            for arg ($@) {
-                [[ $arg = bg:*  ]] && bg=${arg#*:}
-                [[ $arg = fg:*  ]] && fg=${arg#*:}
-                [[ $arg = raw:* ]] && raw=${arg#*:}
-            }
-
-            # This sets segm
-            local segm
-            prompt_newt_rsep "${bg}" "${fg}"
-
-            local fseg
-            if (( $raw )); then
-                fseg=${str}
-            else
-                zformat -f fseg "${str}" \
-                    k:$(bg_color $b0) \
-                    f:$(fg_color $f0)
-                zstyle -t 'prompt-theme:newt:default' compact \
-                    || [ -z $fseg ] || fseg=" $fseg "
-
-            fi
-            segm+=$fseg
-            function make_truecolor_escape () {
-                local n
-                [[ $1 = F ]] && n=38 || n=48
-                shift;
-                printf '%%{\x1b[%d;2;%d;%d;%dm%%}' $n "$@"
-            }
-            # Change %F{RRR;GGG;BBB} to TrueColor escapes
-            segm="${segm//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
-            make_truecolor_escape $match[@]
-            )}"
-
-            res+=$segm
-        }
-
-        function prompt_newt_rsep () {
-            local b1="$1" f1="$2"
-            typeset -g segm b0 f0
-            #print "$0:   [$b0][$f0] [$b1][$f1]"
-
-            [[ $b1 = none ]] && b1=$b0
-            [[ $f1 = none ]] && f1=$f0
-
-            local sep=
-            local ff bb
-            if [[ $b0 = $b1 ]]; then
-                sep+="$(bg_color $b0)$(fg_color $f1)$rthin_separator"
-            else
-                #print "old[$b0, $f0] -> new[$b1, $f1] ff[$(fg_color bg:$bg1)]"
-                sep+="$(fg_color bg:$b1)$rsegment_separator"
-                sep+="$(bg_color $b1)"
-                if [[ $f1 != $(fg_color bg:$b1) ]]; then
-                    sep+="$(fg_color $f1)"
-                fi
-            fi
-
-            segm=$sep
-            b0="$b1"
-            f0="$f1"
-        }
-
-        function bg_color () {
-            local c
-            case $1 in
-                none) c="%K{198}[none]%k" ;;  # Shouldn't happen
-                '')
-                    c="%k"
-                    ;;
-                fg:*)
-                    c=${1#*:}
-                    [[ -z $c ]] && c=$(get_terminal_foreground)
-                    c="%K{$c}"
-                    ;;
-                *)
-                    c="%K{$1}"
-                    ;;
-            esac
-            print -rn $c
-        }
-
-        function fg_color () {
-            local c
-            case $1 in
-                none) c="%F{198}[none]%f" ;;  # Shouldn't happen
-                '')
-                    c="%f"
-                    ;;
-                bg:*)
-                    c=${1#*:}
-                    #c="%F{199}[$c]%f"
-                    [[ -z $c ]] && c=$(get_terminal_background)
-                    c="%F{$c}"
-                    ;;
-                *)
-                    c="%F{$1}"
-                    ;;
-            esac
-            print -rn $c
-        }
-
-
-        # Segment creation                  # {{{1
-
-        if [[ $+MODE_INDICATOR_PROMPT ]]; then
-            local indicator
-            if [[ -o prompt_subst ]]; then
-                indicator='${MODE_INDICATOR_PROMPT}'
-            else
-                indicator="$MODE_INDICATOR_PROMPT"
-            fi
-            [[ -n $indicator ]] && \
-                rsegment_$0 $indicator bg: fg:yellow raw:1
-        fi
-
-        local bg=
-        local clob; zstyle -s ':prompt-theme:newt' clobber clob
-        zstyle -d ':prompt-theme:newt' clobber
-        [[ -n $clob ]] && bg="160"
-        if [[ -n ${vcs_info_msg_0_} ]]; then
-            rps1+="$bg${vcs_info_msg_0_}%k%f"
-            rsegment_$0 ${vcs_info_msg_0_} bg:235 fg:
-        fi
-
-        #rsegment_$0 'flour' fg: bg:
-        #rsegment_$0 'w%F{179}a%K{cyan}t%fe%kr' bg:blue fg:red
-        #rsegment_$0 'salt' bg:
-        rsegment_$0 '%*' bg:240 fg:253
-
-        # Remove a final space, due to ZLE_RPROMPT_INDENT=1
-        [[ ${ZLE_RPROMPT_INDENT:-1} = 1 ]] && res=${res% }
-
-        RPS1="${res}%b%E%k%f"
-        PS1="%F{5}[%F{2}%n%F{5}] %F{3}%3~%f%# "
-    }
-
-
-    # Finalization                      # {{{1
+    # + Finalization {{{1
 
     add-zsh-hook precmd prompt_newt_precmd
 
