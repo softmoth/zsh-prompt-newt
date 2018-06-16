@@ -43,6 +43,75 @@ Configuration
 EOF
 }
 
+# Add an lsegment {{{1
+function prompt_newt_lsegment () {
+    setopt local_options extended_glob
+    local str="$1"
+    local bg=none
+    local fg=none
+    local raw=0
+    for arg ($@) {
+        [[ $arg = bg:*  ]] && bg=${arg#*:}
+        [[ $arg = fg:*  ]] && fg=${arg#*:}
+        [[ $arg = raw:* ]] && raw=${arg#*:}
+    }
+
+    local segm=
+    prompt_newt_set_lsegment_sep "${bg}" "${fg}"  # This sets segm
+
+    local fseg
+    if (( $raw )); then
+        fseg=${str}
+    else
+        zformat -f fseg "${str}" \
+            k:$(prompt_newt_bg_color $prompt_b0) \
+            f:$(prompt_newt_fg_color $prompt_f0)
+        zstyle -t 'prompt-theme:newt:default' compact \
+            || [ -z $fseg ] || fseg=" $fseg "
+    fi
+    segm+=$fseg
+    function make_truecolor_escape () {
+        local n
+        [[ $1 = F ]] && n=38 || n=48
+        shift;
+        printf '%%{\x1b[%d;2;%d;%d;%dm%%}' $n "$@"
+    }
+    # Change %F{RRR;GGG;BBB} to TrueColor escapes
+    segm="${segm//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
+            make_truecolor_escape $match[@])}"
+
+    res+=$segm
+}
+
+# + Determine how to draw the separator for this segment {{{1
+function prompt_newt_set_lsegment_sep () {
+    local b1="$1" f1="$2"
+    typeset -g segm prompt_b0 prompt_f0
+    #print "$0:   [$prompt_b0][$prompt_f0] [$b1][$f1]"
+
+    local lthick_separator=$'\ue0b0'  # 
+    local lthin_separator=$'\ue0b1'   # 
+
+    [[ $b1 = none ]] && b1=$prompt_b0
+    [[ $f1 = none ]] && f1=$prompt_f0
+
+    local sep=
+    if [[ $prompt_b0 = $b1 ]]; then
+        sep+="$(prompt_newt_bg_color $prompt_b0)$(prompt_newt_fg_color $f1)$lthin_separator"
+    else
+        #print "old[$prompt_b0, $prompt_f0] -> new[$b1, $f1] ff[$(prompt_newt_fg_color bg:$bg1)]"
+        sep+="$(prompt_newt_fg_color bg:$b1)$lthick_separator"
+        sep+="$(prompt_newt_bg_color $b1)"
+        if [[ $f1 != $(prompt_newt_fg_color bg:$b1) ]]; then
+            sep+="$(prompt_newt_fg_color $f1)"
+        fi
+    fi
+
+    segm=$sep
+    prompt_b0="$b1"
+    prompt_f0="$f1"
+}
+
 # Add an rsegment {{{1
 function prompt_newt_rsegment () {
     setopt local_options extended_glob
@@ -90,10 +159,8 @@ function prompt_newt_set_rsegment_sep () {
     typeset -g segm prompt_b0 prompt_f0
     #print "$0:   [$prompt_b0][$prompt_f0] [$b1][$f1]"
 
-    local segment_separator=$'\ue0b0'  # 
-    local thin_separator=$'\ue0b1'     # 
-    local rsegment_separator=$'\ue0b2' # 
-    local rthin_separator=$'\ue0b3'    # 
+    local rthick_separator=$'\ue0b2' # 
+    local rthin_separator=$'\ue0b3'  # 
 
     [[ $b1 = none ]] && b1=$prompt_b0
     [[ $f1 = none ]] && f1=$prompt_f0
@@ -103,7 +170,7 @@ function prompt_newt_set_rsegment_sep () {
         sep+="$(prompt_newt_bg_color $prompt_b0)$(prompt_newt_fg_color $f1)$rthin_separator"
     else
         #print "old[$prompt_b0, $prompt_f0] -> new[$b1, $f1] ff[$(prompt_newt_fg_color bg:$bg1)]"
-        sep+="$(prompt_newt_fg_color bg:$b1)$rsegment_separator"
+        sep+="$(prompt_newt_fg_color bg:$b1)$rthick_separator"
         sep+="$(prompt_newt_bg_color $b1)"
         if [[ $f1 != $(prompt_newt_fg_color bg:$b1) ]]; then
             sep+="$(prompt_newt_fg_color $f1)"
