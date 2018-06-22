@@ -15,42 +15,130 @@ function prompt_newt_preview () {
     print ":"
 
     prompt_newt_setup "$@[1,-1]"
+    prompt_newt_hook precmd
 
     function $0_show () {
-        prompt_newt_precmd
+        prompt_newt_assemble_segments left ${(Oa)=prompt_newt_data[left]}
+        prompt_newt_assemble_segments right ${=prompt_newt_data[right]}
         [[ -o promptcr ]] && print -n $'\r'; :
         print -P "${PS1}$*%-0<<${(l:COLUMNS:: :)}${RPS1}"
-        #prompt_newt_preexec
     }
 
-    DEFAULT_USER=$USER \
-        $0_show "vi README.txt  # Default user, local host"
+    prompt_newt_data[+dir+]='~/proj'
+    # Use real vcs info if it's already set!
+    : ${prompt_newt_data[+vcs+]:='%F{1}?%F{6}+%F{7}[master]%f'}
+    $0_show "vi README.txt    # Default user, local host, git"
 
-    USER=root _zsh_theme_preview_euid=0 _zsh_theme_preview_hostname=1 \
-        $0_show "rm -rf /       # Root user, remote host"
+    prompt_newt_data[+dir+]='/etc'
+    prompt_newt_data[+dir+state]=root
+    prompt_newt_data[+jobs+]=2
+    prompt_newt_data[+context+]='@daffy'
+    prompt_newt_data[+vcs+]=''
+    prompt_newt_data[+vi_mode+]=SEARCH
+    prompt_newt_data[+vi_mode+state]=isearch
+    $0_show "rm -rf /  # root, remote, bg jobs, vi-mode"
 
     unfunction $0_show
+    prompt_newt_cleanup
 }
 
 
 # Help {{{1
 
 function prompt_newt_help () {
-    cat <<EOF
-        “She turned me into a newt!”
-        “A newt?”
-        “… I got better.”
+    cat <<'EOF'
+Newt ZSH Theme
+==============
 
-Configuration
--------------
+>   “She turned me into a newt!”
+
+>   “A newt?”
+
+>   “… I got better.”
+
+Segments
+--------
+
+The segments used for left and right prompts can be set with:
+
+    zstyle ":prompt-theme:newt:*" left time context dir
+    zstyle ":prompt-theme:newt:*" right vi_mode status jobs vcs
+
+Segments can be configured with the context
+`:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
+anything you like, and you can call `prompt newt STYLE` to
+use a particular style. If just `prompt newt` is run, the
+style is `default`. *Segment* is the name of the segment, e.g.,
+`vcs` or `dir`. *State* is segment-specific, and is `default`
+for most segments most of the time.
+
+The settings in use can be shown with `zstyle -L | grep newt`.
+
+Example
+-------
+
+    zstyle ":prompt-theme:newt:*:vcs:*"          bg blue
+    zstyle ":prompt-theme:newt:*:vcs:*"          fg yellow
+    zstyle ":prompt-theme:newt:*:vcs:clobbered"  bg yellow
+    zstyle ":prompt-theme:newt:*:vcs:clobbered"  fg red
+
+    zstyle ":prompt-theme:newt:forest:dir:*"     bg green
+    zstyle ":prompt-theme:newt:forest:dir:*"     fg blue
+
+    # Only use the left prompt
+    zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
+    zstyle ":prompt-theme:newt:*" right none
+
+Vi-mode settings
+----------------
+
+The `vi_mode` segment has settings to configure the colors and
+text of the mode indicator. The recognized states are `viins`,
+`vicmd`, `replace`, `isearch`, `visual` and `vline`. For example,
+the `vicmd` mode can be styled with:
+
+    zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
+    zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
+    zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
+
+Truecolor support
+-----------------
+
+If your terminal [supports Truecolor escape sequences][truecolor],
+then you can use them anywhere a color can be specified. That is,
+either in a `zstyle` to set a color, or directly in a `%K{...}` or
+`%F{...}` escape in the prompt text. The color must be given as
+`rrr;ggg;bbb`. For example:
+
+    zstyle ':vcs_info:*' stagedstr '%F{250;128;114}+'
+    zstyle ':prompt-theme:nwet:*:vi_mode:search' bg '199;21;133'
+
+[truecolor]: https://gist.github.com/XVilka/8346728
+
+Miscellaneous settings
+----------------------
+
+    # Remove spacing around segments
+    zstyle ":prompt-theme:newt:*" compact true
+
+    # Tell newt what color the terminal background is; this is only
+    # used to draw the arrow head of the segment separator when the
+    # default background (`bg ''`) is used.
+    zstyle ":prompt-theme" terminal-background 236
+
+Other settings
+--------------
 
     # See zshcontrib(1) for more options related to version control
     zstyle ':vcs_info:*' enable git cvs svn bzr hg
+    zstyle -L ':vcs_info:*'
 
-    # Not specific to this theme, but you may want to remove the right-side
-    # prompt each time:
+    # You may want to keep only the latest the right-side prompt
     setopt TRANSIENT_RPROMPT
 EOF
+
+    # promptinit doesn't handle cleanup
+    [[ $prompt_theme[1] = newt ]] || prompt_newt_cleanup
 }
 
 
@@ -193,7 +281,7 @@ function prompt_newt_fg_color () {
 function get_terminal_background () {
     local color
 
-    zstyle -s 'prompt-theme' terminal-background color
+    zstyle -s ':prompt-theme' terminal-background color
     : ${color:=${COLORFGBG#*;}}
     : ${color:=0}
     print -n $color
@@ -202,7 +290,7 @@ function get_terminal_background () {
 function get_terminal_foreground () {
     local color
 
-    zstyle -s 'prompt-theme' terminal-foreground color
+    zstyle -s ':prompt-theme' terminal-foreground color
     : ${color:=${COLORFGBG%%;*}}
     : ${color:=15}
     print -n $color
@@ -219,7 +307,7 @@ function prompt_newt_finalize_segment () {
             k:$(prompt_newt_bg_color $prompt_b0) \
             f:$(prompt_newt_fg_color $prompt_f0)
 
-        zstyle -t 'prompt-theme:newt:default' compact \
+        zstyle -t "${prompt_newt_data[context]}" compact \
             || [ -z $seg_content ] || seg_content=" $seg_content "
     fi
 
@@ -281,7 +369,7 @@ function +vi-git-remotebranch () {
 # + New untracked files? {{{1
 function +vi-git-untracked () {
     if [[ $(${vcs_comm[cmd]} rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
-        && ${vcs_comm[cmd]} status --porcelain | grep -m 1 '^??' &>/dev/null
+        && ${vcs_comm[cmd]} status --porcelain | command grep -m 1 '^??' &>/dev/null
     then
         hook_com[misc]+='%F{14}?'
     fi
@@ -303,6 +391,10 @@ function +vi-git-st () {
 
 
 # Prompt Segments {{{1
+
+# Placeholder to do nothing
+function prompt_newt+none+setup () {
+}
 
 function prompt_newt+time+precmd () {
     prompt_newt_data[+time+]='%T'
@@ -338,7 +430,7 @@ function prompt_newt+dir+precmd () {
 
 function prompt_newt+vi_mode+setup () {
     local mode
-    local ctx="$prompt_newt_data[defcontext]:vi_mode"
+    local ctx="$prompt_newt_data[starcontext]:vi_mode"
 
     zstyle $ctx viins ''
     zstyle $ctx vicmd 'NORMAL'
@@ -350,15 +442,13 @@ function prompt_newt+vi_mode+setup () {
     zstyle "$ctx:*" bg '8'
     zstyle "$ctx:*" fg '0'
 
-    zstyle "$ctx:vicmd" bg '2'
-    zstyle "$ctx:replace" bg '6'
-    zstyle "$ctx:isearch" bg '5'
-    zstyle "$ctx:visual" bg '4'
-    zstyle "$ctx:vline" bg '4'
+    zstyle $ctx":vicmd" bg '2'
+    zstyle $ctx":replace" bg '6'
+    zstyle $ctx":isearch" bg '5'
+    zstyle $ctx":visual" bg '4'
+    zstyle $ctx":vline" bg '4'
 }
 
-#function prompt_newt+vi_mode+precmd              () { prompt_newt+vi_mode+hook "$@" }
-#function prompt_newt+vi_mode+zle-line-init       () { prompt_newt+vi_mode+hook "$@" }
 function prompt_newt+vi_mode+zle-keymap-select   () { prompt_newt+vi_mode+hook "$@" }
 function prompt_newt+vi_mode+zle-isearch-update  () { prompt_newt+vi_mode+hook "$@" }
 function prompt_newt+vi_mode+zle-isearch-exit    () { prompt_newt+vi_mode+hook "$@" }
@@ -390,11 +480,8 @@ function prompt_newt+status+precmd () {
 }
 
 function prompt_newt+jobs+precmd () {
-    local jobs; print -v jobs -P '%j'
-    if (( $jobs )); then
-    else
-        jobs=
-    fi
+    local jobs
+    (( ${(%):-%j} )) && jobs='%j' || jobs=
     prompt_newt_data[+jobs+]=$jobs
 }
 
@@ -435,9 +522,14 @@ function prompt_newt+vcs+setup () {
 function prompt_newt+vcs+precmd () {
     vcs_info
 
-    (( $+prompt_newt_data[clobber] )) \
-        && prompt_newt_data[+vcs+state]=clobbered \
-        || prompt_newt_data[+vcs+state]=
+    if (( $+prompt_newt_data[clobber] )); then
+        prompt_newt_data[+vcs+state]=clobbered
+    elif [[ ${EUID} = 0 ]]; then
+        # Generally a bad idea to use a VCS as root
+        prompt_newt_data[+vcs+state]=root
+    else
+        prompt_newt_data[+vcs+state]=
+    fi
     noglob unset prompt_newt_data[clobber]
     prompt_newt_data[+vcs+]=$vcs_info_msg_0_
 }
@@ -448,29 +540,32 @@ function prompt_newt+vcs+precmd () {
 function prompt_newt_update_prompt () {
     local hook="$1"; shift
     local side="$1"; shift
-    local func
-    local segment
 
     #${(%):-%x}_debug "hook: $hook $side $@"
     prompt_newt_do_segments $hook "$@" || return
+
+    prompt_newt_assemble_segments "$side" "$@"
+}
+
+function prompt_newt_assemble_segments () {
+    local side="$1"; shift
 
     # These are state variables used in segment funcs
     # The prompt string being built inside prompt_newt_?segment
     local prompt_result= prompt_b0= prompt_f0=
 
-
+    local func
     [[ $side = left ]] \
         && func=prompt_newt_lsegment \
         || func=prompt_newt_rsegment
 
-    local bg fg str ctx
+    local segment bg fg str ctx
     for segment in "$@"; do
         str=${prompt_newt_data[+${segment}+]}
         [[ -n $str || $prompt_newt_data[+${segment}+show_empty] = 1 ]] || continue
         ctx="${prompt_newt_data[context]}:$segment:${prompt_newt_data[+${segment}+state]:-default}"
         zstyle -s "$ctx" bg bg
         zstyle -s "$ctx" fg fg
-        #${(%):-%x}_debug "'$ctx' bg:$bg fg:$fg vcs:${prompt_newt_bg_color[+vcs+state]}"
         $func -b "$bg" -f "$fg" $str
     done
 
@@ -484,8 +579,10 @@ function prompt_newt_update_prompt () {
         [[ ${ZLE_RPROMPT_INDENT:-1} -ge 1 ]] \
             && prompt_result="${prompt_result% }%E"
 
-        RPS1="${prompt_result}%b%f%E%k"
-        RPROMPT=$RPS1
+        # Using $reset_color ensures everything is off, and avoids some
+        # display problems that may show up with %E%b & truecolor escape
+        local reset_color; print -v reset_color '\e[00m'
+        RPS1="${prompt_result}%{${reset_color}%}"
     fi
 }
 
@@ -508,13 +605,17 @@ function prompt_newt_precmd_save_status () {
     prompt_newt_data[save_status]=$?
 }
 
-function prompt_newt_add_zsh_hooks () {
-    prompt_newt_add_hooks add-zsh-hook '' \
-        chpwd precmd preexec periodic zshaddhistory zshexit zsh_directory_name
+
+# Hook function manipulations {{{1
+
+function prompt_newt_list_zsh_hooks () {
+    print \
+        chpwd precmd preexec periodic \
+        zshaddhistory zshexit zsh_directory_name
 }
 
-function prompt_newt_add_zle_hooks () {
-    prompt_newt_add_hooks add-zle-hook-widget zle \
+function prompt_newt_list_zle_hooks () {
+    print \
         isearch-exit isearch-update line-pre-redraw \
         line-init line-finish history-line-set keymap-select
 }
@@ -525,7 +626,7 @@ function prompt_newt_add_hooks () {
 
     [[ -n $tag ]] && tag="${tag}-"
 
-    local func segment
+    local hook func segment
     local -a funcs
 
     for hook in "$@"; do
@@ -557,6 +658,33 @@ function prompt_newt_hook () {
     fi
 }
 
+function prompt_newt_delete_hooks () {
+    local delete_func="$1"; shift
+
+    # Both use -D to delete based on a pattern
+    for hook in "$@"; do
+        ${delete_func} -D $hook 'prompt_newt_*'
+    done
+}
+
+
+# Cleanup {{{1
+function prompt_newt_cleanup () {
+    unset prompt_newt_data
+
+    prompt_newt_delete_hooks add-zsh-hook \
+        ${=$(prompt_newt_list_zsh_hooks)}
+
+    prompt_newt_delete_hooks add-zle-hook-widget \
+        ${=$(prompt_newt_list_zle_hooks)}
+
+    local func
+    for func in ${(kM)functions:#prompt_newt[[:punct:]]*}; do
+        noglob unset functions[$func]
+    done
+
+    autoload prompt_newt_setup
+}
 
 # Main Prompt Setup {{{1
 
@@ -567,13 +695,16 @@ function prompt_newt_setup () {
 
     typeset -g -A -H prompt_newt_data
     prompt_newt_data=()
+    PS1=
+    RPS1=
+
     add-zsh-hook precmd prompt_newt_precmd_save_status
 
     # + Styling {{{1
 
-    prompt_newt_data[style]=${1:-default}
+    prompt_newt_data[style]=${1:-forest}
 
-    prompt_newt_data[defcontext]=':prompt-theme:newt:*'
+    prompt_newt_data[starcontext]=':prompt-theme:newt:*'
     local context=":prompt-theme:newt:$prompt_newt_data[style]"
     prompt_newt_data[context]=$context
 
@@ -583,29 +714,31 @@ function prompt_newt_setup () {
     : ${prompt_newt_data[left]:=time context dir}
     : ${prompt_newt_data[right]:=vi_mode status jobs vcs}
 
-    zstyle "${prompt_newt_data[defcontext]}:context:*"     bg none
-    zstyle "${prompt_newt_data[defcontext]}:context:*"     fg none
-    zstyle "${prompt_newt_data[defcontext]}:dir:*"         bg 4
-    zstyle "${prompt_newt_data[defcontext]}:dir:*"         fg 0
-    zstyle "${prompt_newt_data[defcontext]}:dir:root"      bg ''
-    zstyle "${prompt_newt_data[defcontext]}:dir:root"      fg 9
-    zstyle "${prompt_newt_data[defcontext]}:status:*"      bg ''
-    zstyle "${prompt_newt_data[defcontext]}:status:*"      fg 1
-    zstyle "${prompt_newt_data[defcontext]}:time:*"        bg 8
-    zstyle "${prompt_newt_data[defcontext]}:time:*"        fg 15
-    zstyle "${prompt_newt_data[defcontext]}:vcs:clobbered" bg 9
-    zstyle "${prompt_newt_data[defcontext]}:vcs:*"         bg 8
-    zstyle "${prompt_newt_data[defcontext]}:vcs:*"         fg 0
+    zstyle "${prompt_newt_data[starcontext]}:*:*"           bg 8
+    zstyle "${prompt_newt_data[starcontext]}:*:*"           fg 15
+    zstyle "${prompt_newt_data[starcontext]}:dir:*"         bg 4
+    zstyle "${prompt_newt_data[starcontext]}:dir:root"      bg ''
+    zstyle "${prompt_newt_data[starcontext]}:dir:root"      fg 1
+    zstyle "${prompt_newt_data[starcontext]}:status:*"      fg 1
+    zstyle "${prompt_newt_data[starcontext]}:vcs:clobbered" bg 9
+    zstyle "${prompt_newt_data[starcontext]}:vcs:root"      bg 9
+
+    zstyle ':prompt-theme:newt:forest:*:*'                  bg 22
+    zstyle ':prompt-theme:newt:forest:*:*'                  fg 229
+    zstyle ':prompt-theme:newt:forest:dir:*'                bg 24
 
     prompt_newt_do_segments setup ${=prompt_newt_data[left]}
     prompt_newt_do_segments setup ${=prompt_newt_data[right]}
 
     # + Finalization {{{1
 
-    prompt_newt_add_zsh_hooks
-    prompt_newt_add_zle_hooks
+    prompt_newt_add_hooks add-zsh-hook '' \
+        ${=$(prompt_newt_list_zsh_hooks)}
 
-    prompt_cleanup 'unset prompt_newt_data'
+    prompt_newt_add_hooks add-zle-hook-widget zle \
+        ${=$(prompt_newt_list_zle_hooks)}
+
+    prompt_cleanup '(( ${+functions[prompt_newt_cleanup]} )) && prompt_newt_cleanup'
 
     # Shouldn't need this if everything is put in precmd properly
     #prompt_opts=(cr subst percent)
