@@ -7,6 +7,10 @@ Newt ZSH Theme
 
 >   “… I got better.”
 
+![Newt Theme Preview][preview]
+
+[preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
+
 Segments
 --------
 
