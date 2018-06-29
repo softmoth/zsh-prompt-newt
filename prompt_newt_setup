@@ -307,6 +307,9 @@ function prompt_newt_finalize_segment () {
             k:$(prompt_newt_bg_color $prompt_b0) \
             f:$(prompt_newt_fg_color $prompt_f0)
 
+        # Trim whitespace
+        seg_content=${${seg_content##[[:space:]]##}%%[[:space:]]##}
+
         zstyle -t "${prompt_newt_data[context]}" compact \
             || [ -z $seg_content ] || seg_content=" $seg_content "
     fi
@@ -345,7 +348,7 @@ function +vi-git-show-gitdir () {
         fi
 
         local gdir; print -v gdir -D $GIT_DIR
-        hook_com[branch]="%F{11}$gdir"$'\u2261'"%f%F{15}${hook_com[branch]}"
+        hook_com[branch]="%F{6}$gdir"$'\u2261'"%f${hook_com[branch]}"
     fi
 }
 
@@ -362,7 +365,7 @@ function +vi-git-remotebranch () {
     # differs from the local one.
     #if [[ -n ${remote} ]] ; then
     if [[ -n ${remote} && ${remote#*/} != ${hook_com[branch_orig]} ]] ; then
-        hook_com[branch]+="%F{34}"$'\u00A4'"${remote}"
+        hook_com[branch]+="%F{3}"$'\u00A4'"${remote}"
     fi
 }
 
@@ -371,7 +374,7 @@ function +vi-git-untracked () {
     if [[ $(${vcs_comm[cmd]} rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
         && ${vcs_comm[cmd]} status --porcelain | command grep -m 1 '^??' &>/dev/null
     then
-        hook_com[misc]+='%F{14}?'
+        hook_com[unstaged]+='%F{3}●'
     fi
 }
 
@@ -383,10 +386,10 @@ function +vi-git-st () {
     local behind; behind=$(${vcs_comm[cmd]} rev-list HEAD..$b 2>/dev/null | wc -l)
 
     local -a gitstatus
-    (( $ahead ))  && gitstatus+=( "+${ahead}" )
-    (( $behind )) && gitstatus+=( "-${behind}" )
+    (( $ahead ))  && gitstatus+=( "▴${ahead}" )
+    (( $behind )) && gitstatus+=( "▾${behind}" )
 
-    hook_com[misc]+="%F{139}${(j:/:)gitstatus}"
+    (( $#gitstatus )) && hook_com[misc]+="%F{5}${(j:/:)gitstatus}"
 }
 
 
@@ -464,7 +467,7 @@ function prompt_newt+vi_mode+hook () {
     [[ $mode = $prompt_newt_data[+vi_mode+state] ]] && return 1
     #${(%):-%x}_debug "       + ${prompt_newt_data[+vi_mode+state]} -> $mode"
     prompt_newt_data[+vi_mode+state]=$mode
-    noglob zstyle -s "${prompt_newt_data[context]}:vi_mode" $mode prompt_newt_data[+vi_mode+]
+    zstyle -s "${prompt_newt_data[context]}:vi_mode" $mode 'prompt_newt_data[+vi_mode+]'
 }
 
 function prompt_newt+status+precmd () {
@@ -486,35 +489,20 @@ function prompt_newt+jobs+precmd () {
 }
 
 function prompt_newt+vcs+setup () {
-    # VCS Info TODO - Target setup is: {{{2
-    # -   ZSH_THEME_GIT_PROMPT_PREFIX=" "
-    # -   ZSH_THEME_GIT_PROMPT_SUFFIX=
-    # *%C ZSH_THEME_GIT_PROMPT_CLEAN=
-    # *%A ZSH_THEME_GIT_PROMPT_AHEAD="%{$fg[cyan]%}▴"
-    # *%B ZSH_THEME_GIT_PROMPT_BEHIND="%{$fg[magenta]%}▾"
-    #  %c ZSH_THEME_GIT_PROMPT_STAGED="%{$fg_bold[green]%}●"
-    #  %u ZSH_THEME_GIT_PROMPT_UNSTAGED="%{$fg_bold[yellow]%}●"
-    # *%T ZSH_THEME_GIT_PROMPT_UNTRACKED="%{$fg_bold[red]%}●"
-    #
-    # Maybe:
-    #     misc="%A/%B %T"  # Presently
-    #     zstyle ':vcs_info:*'     formats       ' %m%c%u%T%C%f[%b%f]'
-    #     # %D: GIT_DIR; %W: GIT_WORK_TREE; %b: branch; %R: remote
-    #     zstyle ':vcs_info:git:*' branchformat  '%D%b%R'
-    #     zstyle ':vcs_info:git:*' set-branch-format
-    # }}}
-
     #zstyle ':vcs_info:*+*:*' debug true
     zstyle ':vcs_info:*' check-for-changes true
-    zstyle ':vcs_info:*' stagedstr     "%F{10}+"
-    zstyle ':vcs_info:*' unstagedstr   "%F{11}!"
-    zstyle ':vcs_info:*' formats       '%m%c%u%f[%b%f]'
-    zstyle ':vcs_info:*' actionformats '%F{12}[%b|%a]%f'
+    zstyle ':vcs_info:*' stagedstr     "%F{2}●"
+    zstyle ':vcs_info:*' unstagedstr   "%F{1}●"
+    zstyle ':vcs_info:*' formats       '%m%u%c %f%b'
+    zstyle ':vcs_info:*' actionformats '%F{5}%b|%a%f'
 
     zstyle ':vcs_info:git*+post-backend:*' hooks \
         git-show-gitdir \
         git-remotebranch \
         git-st \
+        # ∴
+
+    zstyle ':vcs_info:git*+set-message:*' hooks \
         git-untracked \
         # ∴
 }
@@ -530,7 +518,7 @@ function prompt_newt+vcs+precmd () {
     else
         prompt_newt_data[+vcs+state]=
     fi
-    noglob unset prompt_newt_data[clobber]
+    unset 'prompt_newt_data[clobber]'
     prompt_newt_data[+vcs+]=$vcs_info_msg_0_
 }
 
@@ -541,10 +529,23 @@ function prompt_newt_update_prompt () {
     local hook="$1"; shift
     local side="$1"; shift
 
-    #${(%):-%x}_debug "hook: $hook $side $@"
+    #${(%):-%x}_debug "update_prompt: $hook $side $@"
     prompt_newt_do_segments $hook "$@" || return
+    prompt_newt_assemble_segments $side "$@"
+}
 
-    prompt_newt_assemble_segments "$side" "$@"
+function prompt_newt_do_segments () {
+    local hook="$1"; shift
+    local changed=0
+    local func segment
+    for segment in "$@"; do
+        func="prompt_newt+$segment+$hook"
+        (( ${+functions[$func]} )) || continue
+        $func $hook && changed=1
+    done
+
+    (( $changed )) || return 1
+    return 0
 }
 
 function prompt_newt_assemble_segments () {
@@ -584,20 +585,6 @@ function prompt_newt_assemble_segments () {
         local reset_color; print -v reset_color '\e[00m'
         RPS1="${prompt_result}%{${reset_color}%}"
     fi
-}
-
-function prompt_newt_do_segments () {
-    local hook="$1"; shift
-    local changed=0
-    local func segment
-    for segment in "$@"; do
-        func="prompt_newt+$segment+$hook"
-        (( ${+functions[$func]} )) || continue
-        $func $hook && changed=1
-    done
-
-    (( $changed )) || return 1
-    return 0
 }
 
 function prompt_newt_precmd_save_status () {
@@ -647,7 +634,6 @@ function prompt_newt_add_hooks () {
     done
 }
 
-
 function prompt_newt_hook () {
     local hook="$1"
     prompt_newt_update_prompt $hook left ${(Oa)=prompt_newt_data[left]}
@@ -680,7 +666,7 @@ function prompt_newt_cleanup () {
 
     local func
     for func in ${(kM)functions:#prompt_newt[[:punct:]]*}; do
-        noglob unset functions[$func]
+        unset "functions[$func]"
     done
 
     autoload prompt_newt_setup
@@ -702,26 +688,32 @@ function prompt_newt_setup () {
 
     # + Styling {{{1
 
-    prompt_newt_data[style]=${1:-forest}
+    prompt_newt_data[style]=${1:-default}
 
     prompt_newt_data[starcontext]=':prompt-theme:newt:*'
     local context=":prompt-theme:newt:$prompt_newt_data[style]"
     prompt_newt_data[context]=$context
 
-    noglob zstyle -s $context left prompt_newt_data[left]
-    noglob zstyle -s $context right prompt_newt_data[right]
+    zstyle -s $context left  'prompt_newt_data[left]'
+    zstyle -s $context right 'prompt_newt_data[right]'
 
     : ${prompt_newt_data[left]:=time context dir}
     : ${prompt_newt_data[right]:=vi_mode status jobs vcs}
 
-    zstyle "${prompt_newt_data[starcontext]}:*:*"           bg 8
-    zstyle "${prompt_newt_data[starcontext]}:*:*"           fg 15
+    if [[ ${COLORFGBG#*;} = 0 ]]; then
+        zstyle "${prompt_newt_data[starcontext]}:*:*"       bg 7
+        zstyle "${prompt_newt_data[starcontext]}:*:*"       fg 0
+    else
+        zstyle "${prompt_newt_data[starcontext]}:*:*"       bg 0
+        zstyle "${prompt_newt_data[starcontext]}:*:*"       fg 7
+    fi
     zstyle "${prompt_newt_data[starcontext]}:dir:*"         bg 4
     zstyle "${prompt_newt_data[starcontext]}:dir:root"      bg ''
     zstyle "${prompt_newt_data[starcontext]}:dir:root"      fg 1
+    zstyle "${prompt_newt_data[starcontext]}:status:*"      bg ''
     zstyle "${prompt_newt_data[starcontext]}:status:*"      fg 1
-    zstyle "${prompt_newt_data[starcontext]}:vcs:clobbered" bg 9
-    zstyle "${prompt_newt_data[starcontext]}:vcs:root"      bg 9
+    zstyle "${prompt_newt_data[starcontext]}:vcs:clobbered" bg 1
+    zstyle "${prompt_newt_data[starcontext]}:vcs:root"      bg 1
 
     zstyle ':prompt-theme:newt:forest:*:*'                  bg 22
     zstyle ':prompt-theme:newt:forest:*:*'                  fg 229
