@@ -24,15 +24,24 @@ function prompt_newt_preview () {
         print -P "${PS1}$*%-0<<${(l:COLUMNS:: :)}${RPS1}"
     }
 
-    prompt_newt_data[+dir+]='~/proj'
-    # Use real vcs info if it's already set!
-    : ${prompt_newt_data[+vcs+]:='%F{1}?%F{6}+%F{7}[master]%f'}
+    # Fake vcs info if $PWD isn't
+    if [[ -z $prompt_newt_data[+vcs+] ]]; then
+        local formats; zstyle -s ':vcs_info:*' formats formats
+        local str_c; zstyle -s ':vcs_info:*' stagedstr str_c
+        local str_u; zstyle -s ':vcs_info:*' unstagedstr str_u
+        zformat -f 'prompt_newt_data[+vcs+]' "$formats" \
+            m: \
+            u:$str_u \
+            c:$str_c \
+            b:master
+        prompt_newt_data[+dir+]='~/proj'
+    fi
     $0_show "vi README.txt    # Default user, local host, git"
 
     prompt_newt_data[+dir+]='/etc'
     prompt_newt_data[+dir+state]=root
     prompt_newt_data[+jobs+]=2
-    prompt_newt_data[+context+]='@daffy'
+    prompt_newt_data[+context+]='daffy'
     prompt_newt_data[+vcs+]=''
     prompt_newt_data[+vi_mode+]=SEARCH
     prompt_newt_data[+vi_mode+state]=isearch
@@ -46,15 +55,25 @@ function prompt_newt_preview () {
 # Help {{{1
 
 function prompt_newt_help () {
-    cat <<'EOF'
+    local br='  '  # Markdown line break
+
+    cat <<EOF
 Newt ZSH Theme
 ==============
 
->   “She turned me into a newt!”
+>   “She turned me into a newt!”$br
+>   “A newt?”$br
+>   “… I got better.”$br
+EOF
 
->   “A newt?”
+    (( $+PROMPT_NEWT_README )) && cat <<'EOF'
 
->   “… I got better.”
+![Newt Theme Preview][preview]
+
+[preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
+EOF
+
+    cat <<'EOF'
 
 Segments
 --------
@@ -111,7 +130,7 @@ either in a `zstyle` to set a color, or directly in a `%K{...}` or
 `rrr;ggg;bbb`. For example:
 
     zstyle ':vcs_info:*' stagedstr '%F{250;128;114}+'
-    zstyle ':prompt-theme:nwet:*:vi_mode:search' bg '199;21;133'
+    zstyle ':prompt-theme:newt:*:vi_mode:search' bg '199;21;133'
 
 [truecolor]: https://gist.github.com/XVilka/8346728
 
@@ -348,7 +367,8 @@ function +vi-git-show-gitdir () {
         fi
 
         local gdir; print -v gdir -D $GIT_DIR
-        hook_com[branch]="%F{6}$gdir"$'\u2261'"%f${hook_com[branch]}"
+        gdir="%F{6}$gdir"$'\u2261'"%f"  # ≡
+        hook_com[branch]="$gdir${hook_com[branch]}"
     fi
 }
 
@@ -365,7 +385,7 @@ function +vi-git-remotebranch () {
     # differs from the local one.
     #if [[ -n ${remote} ]] ; then
     if [[ -n ${remote} && ${remote#*/} != ${hook_com[branch_orig]} ]] ; then
-        hook_com[branch]+="%F{3}"$'\u00A4'"${remote}"
+        hook_com[branch]+="%F{3}"$'\u00a4'"${remote}"  # ¤
     fi
 }
 
@@ -374,20 +394,22 @@ function +vi-git-untracked () {
     if [[ $(${vcs_comm[cmd]} rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
         && ${vcs_comm[cmd]} status --porcelain | command grep -m 1 '^??' &>/dev/null
     then
-        hook_com[unstaged]+='%F{3}●'
+        local str; zstyle -s ':vcs_info:*' untrackedstr str
+        hook_com[unstaged]+=${str:-T}
     fi
 }
 
 # + Ahead / behind of upstream? {{{1
-function +vi-git-st () {
+function +vi-git-upstream () {
     local b; b="${hook_com[branch_orig]}@{upstream}"
 
-    local ahead;  ahead=$( ${vcs_comm[cmd]} rev-list $b..HEAD 2>/dev/null | wc -l)
-    local behind; behind=$(${vcs_comm[cmd]} rev-list HEAD..$b 2>/dev/null | wc -l)
+    local ahead behind
+    ahead=$( ${vcs_comm[cmd]} rev-list $b..HEAD 2>/dev/null | wc -l)
+    behind=$(${vcs_comm[cmd]} rev-list HEAD..$b 2>/dev/null | wc -l)
 
     local -a gitstatus
-    (( $ahead ))  && gitstatus+=( "▴${ahead}" )
-    (( $behind )) && gitstatus+=( "▾${behind}" )
+    (( $ahead ))  && gitstatus+=( $'\u25b4'$ahead )   # ▴
+    (( $behind )) && gitstatus+=( $'\u25be'$behind )  # ▾
 
     (( $#gitstatus )) && hook_com[misc]+="%F{5}${(j:/:)gitstatus}"
 }
@@ -405,7 +427,7 @@ function prompt_newt+time+precmd () {
 
 function prompt_newt+context+precmd () {
     local u=;
-    local h; print -v h -P '%m'
+    local h="${(%):-%m}"
 
     # Only show user if it's other than DEFAULT_USER. Treat root as
     # another default user, since prompt color shows we're privileged.
@@ -491,15 +513,16 @@ function prompt_newt+jobs+precmd () {
 function prompt_newt+vcs+setup () {
     #zstyle ':vcs_info:*+*:*' debug true
     zstyle ':vcs_info:*' check-for-changes true
-    zstyle ':vcs_info:*' stagedstr     "%F{2}●"
-    zstyle ':vcs_info:*' unstagedstr   "%F{1}●"
-    zstyle ':vcs_info:*' formats       '%m%u%c %f%b'
-    zstyle ':vcs_info:*' actionformats '%F{5}%b|%a%f'
+    zstyle ':vcs_info:*' stagedstr     $'%F{2}\u25cf'          # ●
+    zstyle ':vcs_info:*' untrackedstr  $'%F{3}\u25cf'          # ●
+    zstyle ':vcs_info:*' unstagedstr   $'%F{1}\u25cf'          # ●
+    zstyle ':vcs_info:*' formats       $'\ue0a0%m%u%c %f%b'    # 
+    zstyle ':vcs_info:*' actionformats $'\ue0a0 %F{5}%b|%a%f'  # 
 
     zstyle ':vcs_info:git*+post-backend:*' hooks \
         git-show-gitdir \
         git-remotebranch \
-        git-st \
+        git-upstream \
         # ∴
 
     zstyle ':vcs_info:git*+set-message:*' hooks \
@@ -582,7 +605,7 @@ function prompt_newt_assemble_segments () {
 
         # Using $reset_color ensures everything is off, and avoids some
         # display problems that may show up with %E%b & truecolor escape
-        local reset_color; print -v reset_color '\e[00m'
+        local reset_color=$'\e[00m'
         RPS1="${prompt_result}%{${reset_color}%}"
     fi
 }

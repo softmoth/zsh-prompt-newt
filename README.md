@@ -1,11 +1,9 @@
 Newt ZSH Theme
 ==============
 
->   “She turned me into a newt!”
-
->   “A newt?”
-
->   “… I got better.”
+>   “She turned me into a newt!”  
+>   “A newt?”  
+>   “… I got better.”  
 
 ![Newt Theme Preview][preview]
 
@@ -66,7 +64,7 @@ either in a `zstyle` to set a color, or directly in a `%K{...}` or
 `rrr;ggg;bbb`. For example:
 
     zstyle ':vcs_info:*' stagedstr '%F{250;128;114}+'
-    zstyle ':prompt-theme:nwet:*:vi_mode:search' bg '199;21;133'
+    zstyle ':prompt-theme:newt:*:vi_mode:search' bg '199;21;133'
 
 [truecolor]: https://gist.github.com/XVilka/8346728
 
