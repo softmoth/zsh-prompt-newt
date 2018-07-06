@@ -424,7 +424,7 @@ function prompt_newt+context+precmd () {
 }
 
 function prompt_newt+dir+precmd () {
-    prompt_newt_data[+dir+]='%~'
+    prompt_newt_data[+dir+]='%4~'
 
     [[ $EUID = 0 ]] \
         && prompt_newt_data[+dir+state]=root \
