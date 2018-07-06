@@ -34,18 +34,18 @@ function prompt_newt_preview () {
             u:$str_u \
             c:$str_c \
             b:master
-        prompt_newt_data[+dir+]='~/proj'
+        prompt_newt_data[+dir+]='~/code'
     fi
-    $0_show "vi README.txt    # Default user, local host, git"
+    $0_show "vi README.txt   # Default user, local host, git"
 
     prompt_newt_data[+dir+]='/etc'
     prompt_newt_data[+dir+state]=root
-    prompt_newt_data[+jobs+]=2
+    prompt_newt_data[+jobs+]=$'\u2699 2'
     prompt_newt_data[+context+]='daffy'
     prompt_newt_data[+vcs+]=''
     prompt_newt_data[+vi_mode+]=SEARCH
     prompt_newt_data[+vi_mode+state]=isearch
-    $0_show "rm -rf /  # root, remote, bg jobs, vi-mode"
+    $0_show "rm -rf /  # remote host, root, vi-mode, jobs"
 
     unfunction $0_show
     prompt_newt_cleanup
@@ -492,22 +492,38 @@ function prompt_newt+vi_mode+hook () {
     zstyle -s "${prompt_newt_data[context]}:vi_mode" $mode 'prompt_newt_data[+vi_mode+]'
 }
 
+function prompt_newt+status+setup () {
+    prompt_newt_data[save_status]=0
+    zstyle "$prompt_newt_data[starcontext]:status" default $'\u2718 %?'  # ✘
+    zstyle "$prompt_newt_data[starcontext]:status" zero ''
+}
+
 function prompt_newt+status+precmd () {
+    local str
     case $prompt_newt_data[save_status] in
         0|20|148)
             # Ignore suspended command
-            prompt_newt_data[+status+]=
+            zstyle -s "$prompt_newt_data[context]:status" zero str
             ;;
         *)
-            prompt_newt_data[+status+]=$prompt_newt_data[save_status]
+            zstyle -s "$prompt_newt_data[context]:status" default str
             ;;
     esac
+    zformat -f 'prompt_newt_data[+status+]' "$str" \
+        '?':$prompt_newt_data[save_status]
+}
+
+function prompt_newt+jobs+setup () {
+    zstyle "$prompt_newt_data[starcontext]:jobs" default $'\u2699 %j'  # ⚙
+    zstyle "$prompt_newt_data[starcontext]:jobs" zero ''
 }
 
 function prompt_newt+jobs+precmd () {
+    local ctx="$prompt_newt_data[context]:jobs"
     local jobs
-    (( ${(%):-%j} )) && jobs='%j' || jobs=
-    prompt_newt_data[+jobs+]=$jobs
+    (( ${(%):-%j} )) \
+        && zstyle -s $ctx default 'prompt_newt_data[+jobs+]' \
+        || zstyle -s $ctx zero    'prompt_newt_data[+jobs+]'
 }
 
 function prompt_newt+vcs+setup () {
