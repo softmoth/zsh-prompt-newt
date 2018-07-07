@@ -2,7 +2,7 @@ emulate -L zsh
 
 zmodload zsh/parameter
 
-function ${(%):-%x}_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
+#function prompt_newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
 
 # Preview {{{1
 
@@ -10,44 +10,50 @@ function prompt_newt_preview () {
     local _zsh_theme_preview_euid
     local _zsh_theme_preview_hostname
 
-    print -n "newt theme"
-    (( $#* > 0 )) && print -n " with parameters ${(qqq)@[1,-1]}"
-    print ":"
+    (( $#* )) || set -- default forest
 
-    prompt_newt_setup "$@[1,-1]"
-    prompt_newt_hook precmd
-
-    function $0_show () {
+    function prompt_newt_preview_show () {
         prompt_newt_assemble_segments left ${(Oa)=prompt_newt_data[left]}
         prompt_newt_assemble_segments right ${=prompt_newt_data[right]}
         [[ -o promptcr ]] && print -n $'\r'; :
         print -P "${PS1}$*%-0<<${(l:COLUMNS:: :)}${RPS1}"
     }
 
-    # Fake vcs info if $PWD isn't
-    if [[ -z $prompt_newt_data[+vcs+] ]]; then
-        local formats; zstyle -s :vcs_info:\* formats formats
-        local str_c; zstyle -s   :vcs_info:\* stagedstr str_c
-        local str_u; zstyle -s   :vcs_info:\* unstagedstr str_u
-        zformat -f 'prompt_newt_data[+vcs+]' "$formats" \
-            m: \
-            u:$str_u \
-            c:$str_c \
-            b:master
-        prompt_newt_data[+dir+]='~/code'
-    fi
-    $0_show "vi README.txt   # Default user, local host, git"
+    function prompt_newt_preview_style () {
+        print "newt theme ($1):"
 
-    prompt_newt_data[+dir+]='/etc'
-    prompt_newt_data[+dir+state]=root
-    prompt_newt_data[+jobs+]=$'\u2699 2'
-    prompt_newt_data[+context+]='daffy'
-    prompt_newt_data[+vcs+]=''
-    prompt_newt_data[+vi_mode+]=SEARCH
-    prompt_newt_data[+vi_mode+state]=isearch
-    $0_show "rm -rf /  # remote host, root, vi-mode, jobs"
+        prompt_newt_setup "$1"
+        prompt_newt_hook precmd
 
-    unfunction $0_show
+        # Fake vcs info if $PWD isn't
+        if [[ -z $prompt_newt_data[+vcs+] ]]; then
+            local formats; zstyle -s :vcs_info:\* formats formats
+            local str_c; zstyle -s   :vcs_info:\* stagedstr str_c
+            local str_u; zstyle -s   :vcs_info:\* unstagedstr str_u
+            zformat -f 'prompt_newt_data[+vcs+]' "$formats" \
+                m: \
+                u:$str_u \
+                c:$str_c \
+                b:master
+            prompt_newt_data[+dir+]='~/code'
+        fi
+        prompt_newt_preview_show "vi README.txt   # Default user, local host, git"
+
+        prompt_newt_data[+dir+]=/etc
+        prompt_newt_data[+dir+state]=root
+        prompt_newt_data[+jobs+]=$'\u2699 2'
+        prompt_newt_data[+context+]=daffy
+        prompt_newt_data[+vcs+]=
+        prompt_newt_data[+vi_mode+]=SEARCH
+        prompt_newt_data[+vi_mode+state]=isearch
+        prompt_newt_preview_show "rm -rf /  # remote host, root, vi-mode, jobs"
+    }
+
+    for style in "$@"; do
+        prompt_newt_preview_style $style
+    done
+
+    unfunction prompt_newt_preview_show prompt_newt_preview_style
     prompt_newt_cleanup
 }
 
@@ -464,7 +470,7 @@ function prompt_newt+vi_mode+setup () {
     zstyle $ctx visual  VISUAL
     zstyle $ctx vline   V-LINE
 
-    zstyle ${ctx}:\* bg 8
+    zstyle ${ctx}:\* bg 7
     zstyle ${ctx}:\* fg 0
 
     zstyle ${ctx}:vicmd   bg 2
@@ -481,13 +487,13 @@ function prompt_newt+vi_mode+zle-line-pre-redraw () { prompt_newt+vi_mode+hook "
 
 function prompt_newt+vi_mode+hook () {
     local mode="${VIM_MODE_KEYMAP-$KEYMAP}"
-    #${(%):-%x}_debug "vi_mode: ${prompt_newt_data[+vi_mode+state]} -> $mode [$@]"
+    #prompt_newt_debug "vi_mode: ${prompt_newt_data[+vi_mode+state]} -> $mode [$@]"
     case $mode in
         viins|vicmd|replace|isearch|visual|vline) ;;
         main|*) mode=viins ;;
     esac
     [[ $mode = $prompt_newt_data[+vi_mode+state] ]] && return 1
-    #${(%):-%x}_debug "       + ${prompt_newt_data[+vi_mode+state]} -> $mode"
+    #prompt_newt_debug "       + ${prompt_newt_data[+vi_mode+state]} -> $mode"
     prompt_newt_data[+vi_mode+state]=$mode
     zstyle -s ${prompt_newt_data[context]}:vi_mode $mode 'prompt_newt_data[+vi_mode+]'
 }
@@ -568,7 +574,7 @@ function prompt_newt_update_prompt () {
     local hook="$1"; shift
     local side="$1"; shift
 
-    #${(%):-%x}_debug "update_prompt: $hook $side $@"
+    #prompt_newt_debug "update_prompt: $hook $side $@"
     prompt_newt_do_segments $hook "$@" || return
     prompt_newt_assemble_segments $side "$@"
 }
