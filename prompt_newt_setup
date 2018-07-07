@@ -136,6 +136,8 @@ Colors indexes are
 10. Blue
 11. Magenta
 12. Cyan
+13. Black
+14. White
 
 Since the *mono* style specifies 4 colors, the following will
 change the Alert colors to pale yellow on a hot pink background:
@@ -327,7 +329,7 @@ function prompt_newt_set_rseg_separator () {
 function prompt_newt_bg_color () {
     local c
     case $1 in
-        none) c="%K{198}[none]%k" ;;  # Shouldn't happen
+        none) c="%K{1}[none-bg]%k" ;;  # Shouldn't happen
         '')
             c="%k"
             ;;
@@ -346,7 +348,7 @@ function prompt_newt_bg_color () {
 function prompt_newt_fg_color () {
     local c
     case $1 in
-        none) c="%F{1}[none]%f" ;;  # Shouldn't happen
+        none) c="%F{1}[none-fg]%f" ;;  # Shouldn't happen
         '')
             c="%f"
             ;;
@@ -542,7 +544,7 @@ function prompt_newt+vi_mode+setup () {
     zstyle $ctx vline   V-LINE
 
     zstyle ${ctx}:\*      bg $_prompt_newt[color-yellow]
-    zstyle ${ctx}:\*      fg black
+    zstyle ${ctx}:\*      fg $_prompt_newt[color-black]
     zstyle ${ctx}:vicmd   bg $_prompt_newt[color-green]
     zstyle ${ctx}:replace bg $_prompt_newt[color-cyan]
     zstyle ${ctx}:isearch bg $_prompt_newt[color-magenta]
@@ -612,11 +614,14 @@ function prompt_newt+notice+precmd () {
 }
 
 function prompt_newt+vcs+setup () {
+    local green=$(prompt_newt_fg_color $_prompt_newt[color-green])
+    local yellow=$(prompt_newt_fg_color $_prompt_newt[color-yellow])
+    local red=$(prompt_newt_fg_color $_prompt_newt[color-red])
     #zstyle :vcs_info:'*+*:*' debug true
     zstyle :vcs_info:\* check-for-changes true
-    zstyle :vcs_info:\* stagedstr     $'%F{2}\u25cf'        # ●
-    zstyle :vcs_info:\* untrackedstr  $'%F{3}\u25cf'        # ●
-    zstyle :vcs_info:\* unstagedstr   $'%F{1}\u25cf'        # ●
+    zstyle :vcs_info:\* stagedstr     $green$'\u25cf'       # ●
+    zstyle :vcs_info:\* untrackedstr  $yellow$'\u25cf'      # ●
+    zstyle :vcs_info:\* unstagedstr   $red$'\u25cf'         # ●
     zstyle :vcs_info:\* formats       $'\ue0a0%m%u%c %f%b'  # 
     zstyle :vcs_info:\* actionformats $'\ue0a0 %b|%a%f'     # 
 
@@ -829,8 +834,8 @@ function prompt_newt_setup () {
     typeset -g -A prompt_newt_style
     prompt_newt_style[default]=$colorbgfg
     prompt_newt_style[mono]='235 242 238 250'
-    prompt_newt_style[meadow]='149 235 81'
-    prompt_newt_style[forest]='22 229 24'
+    prompt_newt_style[meadow]='149 235 81 235'
+    prompt_newt_style[forest]='22 229 24 229'
 
     if [[ -n $1 && $+prompt_newt_style[$1] > 0 ]]; then
         _prompt_newt[style]=$1
@@ -860,6 +865,8 @@ function prompt_newt_setup () {
         _prompt_newt[color-blue]=${10-blue}
         _prompt_newt[color-magenta]=${11-magenta}
         _prompt_newt[color-cyan]=${12-cyan}
+        _prompt_newt[color-black]=${13-black}
+        _prompt_newt[color-white]=${14-white}
     }
 
     $0-set-colors ${(z)prompt_newt_style[${_prompt_newt[style]}]} "$@"
@@ -902,9 +909,9 @@ function prompt_newt_setup () {
     zstyle ${_prompt_newt[starctx]}:vcs:root      bg $_prompt_newt[color5]
     zstyle ${_prompt_newt[starctx]}:vcs:root      fg $_prompt_newt[color6]
     #zstyle ${_prompt_newt[starctx]}:vcs:action    bg $_prompt_newt[color-cyan]
-    #zstyle ${_prompt_newt[starctx]}:vcs:action    fg black
+    #zstyle ${_prompt_newt[starctx]}:vcs:action    fg $_prompt_newt[color-black]
     #zstyle ${_prompt_newt[starctx]}:vcs:dirty     bg $_prompt_newt[color-magenta]
-    #zstyle ${_prompt_newt[starctx]}:vcs:dirty     fg black
+    #zstyle ${_prompt_newt[starctx]}:vcs:dirty     fg $_prompt_newt[color-black]
 
     prompt_newt_do_segments setup ${=_prompt_newt[left]}
     prompt_newt_do_segments setup ${=_prompt_newt[right]}
