@@ -238,7 +238,7 @@ EOF
 # + Add a left segment {{{1
 function prompt_newt_lsegment () {
     local -A opts
-    opts=(bg none fg none raw 0)
+    opts=(-b none -f none -r 0)
     zparseopts -D -A opts -K -- b: f: r
 
     local seg_separator
@@ -265,7 +265,7 @@ function prompt_newt_set_lseg_separator () {
     if [[ $b1 = $prompt_b0 ]]; then
         seg_separator+=$lthin_separator
         [[ $f1 != $prompt_f0 ]] \
-            && seg_separator+=$(prompt_newt_fg_color $f0)
+            && seg_separator+=$(prompt_newt_fg_color $prompt_f0)
     else
         local sepfg="$(prompt_newt_fg_color bg:$b1)"
         seg_separator+=$sepfg
@@ -282,7 +282,7 @@ function prompt_newt_set_lseg_separator () {
 # + Add a right segment {{{1
 function prompt_newt_rsegment () {
     local -A opts
-    opts=(bg none fg none raw 0)
+    opts=(-b none -f none -r 0)
     zparseopts -D -A opts -K -- b: f: r
 
     local seg_separator
