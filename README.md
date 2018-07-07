@@ -9,13 +9,51 @@ Newt ZSH Theme
 
 [preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 
+Styles
+------
+
+Newt comes with these pre-defined styles:
+*default, forest, meadow, mono*.
+Use a style with `prompt newt meadow`.
+
+Create a bespoke style with `prompt newt blue white magenta`, giving a list of
+colors. Each color can be
+
+- one of `''`, *black, red, yellow, green, blue, magenta, cyan, white*, or
+- a color number supported by your terminal, or
+- a truecolor specification as described in **Truecolor support** below.
+
+These styles are simply shorthand for the `zstyle` configuration, as
+described in **Segments** below. So the style can be used to get most
+things as you like, and then individual elements can be refined further.
+
+Colors indexes are
+
+1.  Primary background
+2.  Primary foreground
+3.  Secondary background
+4.  Secondary foreground
+5.  Alert background
+6.  Alert foreground
+7.  Red
+8.  Green
+9.  Yellow
+10. Blue
+11. Magenta
+12. Cyan
+
+Since the *mono* style specifies 4 colors, the following will
+change the Alert colors to pale yellow on a hot pink background:
+
+    prompt newt mono 161 227
+
 Segments
 --------
 
 The segments used for left and right prompts can be set with:
 
-    zstyle ":prompt-theme:newt:*" left time context dir
-    zstyle ":prompt-theme:newt:*" right vi_mode status jobs vcs
+    zstyle ':prompt-theme:newt:*' left time context dir
+    zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
 
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
@@ -30,17 +68,17 @@ The settings in use can be shown with `zstyle -L | grep newt`.
 Example
 -------
 
-    zstyle ":prompt-theme:newt:*:vcs:*"          bg blue
-    zstyle ":prompt-theme:newt:*:vcs:*"          fg yellow
-    zstyle ":prompt-theme:newt:*:vcs:clobbered"  bg yellow
-    zstyle ":prompt-theme:newt:*:vcs:clobbered"  fg red
+    zstyle ':prompt-theme:newt:*:vcs:*'          bg blue
+    zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
+    zstyle ':prompt-theme:newt:*:vcs:clobbered'  bg yellow
+    zstyle ':prompt-theme:newt:*:vcs:clobbered'  fg red
 
-    zstyle ":prompt-theme:newt:forest:dir:*"     bg green
-    zstyle ":prompt-theme:newt:forest:dir:*"     fg blue
+    zstyle ':prompt-theme:newt:forest:dir:*'     bg green
+    zstyle ':prompt-theme:newt:forest:dir:*'     fg blue
 
     # Only use the left prompt
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
-    zstyle ":prompt-theme:newt:*" right none
+    zstyle ':prompt-theme:newt:*' right none
 
 Vi-mode settings
 ----------------
@@ -53,6 +91,16 @@ the `vicmd` mode can be styled with:
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
+
+Version Control settings
+----------------
+
+The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
+and `default`. Most of the display is controlled by `VCS_Info`:
+
+    # See zshcontrib(1) for more options related to version control
+    zstyle ':vcs_info:*' enable git cvs svn bzr hg
+    zstyle -L ':vcs_info:*'
 
 Truecolor support
 -----------------
@@ -72,19 +120,13 @@ Miscellaneous settings
 ----------------------
 
     # Remove spacing around segments
-    zstyle ":prompt-theme:newt:*" compact true
+    zstyle ':prompt-theme:newt:*' compact true
 
-    # Tell newt what color the terminal background is; this is only
-    # used to draw the arrow head of the segment separator when the
-    # default background (`bg ''`) is used.
-    zstyle ":prompt-theme" terminal-background 236
+    # Tell newt what colors the terminal uses; background is used to
+    # draw the arrow head of the segment separator when the default
+    # background (bg '') is used. Also used for the default theme.
+    zstyle ':prompt-theme' terminal-background 236
+    zstyle ':prompt-theme' terminal-foreground 254
 
-Other settings
---------------
-
-    # See zshcontrib(1) for more options related to version control
-    zstyle ':vcs_info:*' enable git cvs svn bzr hg
-    zstyle -L ':vcs_info:*'
-
-    # You may want to keep only the latest the right-side prompt
+    # Keep only the latest the right-side prompt
     setopt TRANSIENT_RPROMPT
