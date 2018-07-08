@@ -4,6 +4,77 @@ zmodload zsh/parameter
 
 #function prompt_newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
 
+function prompt_newt_defaults () {
+    local -a z
+    local -i m1 m2
+    local a b
+    for k v in "${(kv)_prompt_newt_defaults[@]}"; do
+        a=${${=k}[2,-1]}
+        b=${${=k}[1]}
+        (( m1 < $#a )) && m1=$#a
+        (( m2 < $#b )) && m2=$#b
+    done
+
+    local ctx=':prompt-theme:newt:*:'
+    for k v in "${(kv)_prompt_newt_defaults[@]}"; do
+        z[$#z+1]=$(printf \
+                'zstyle   %-*s %-*s %s' \
+                $(($#ctx + m1 + 4)) ${(qq):-$ctx${(j.:.)${=k}[2,-1]}} \
+                $((m2 + 2)) "${(q)${=k}[1]}" \
+                ${(q)v})
+    done
+
+    LANG=C print -o -lr $z
+}
+
+function prompt_newt_default () {
+    if [[ $#* = 0 ]]; then
+        prompt_newt_defaults
+        return
+    fi
+
+    local -A opts
+    zparseopts -A opts -D - d
+    (( $+opts[-d] )) \
+        && unset "_prompt_newt_defaults[$*]" \
+        || _prompt_newt_defaults+=(["${@[2,-1]}"]=$1)
+}
+
+function prompt_newt_zstyle () {
+    local -A opts
+    zparseopts -A opts -D - d: x
+    local style="$1"
+    local ctx=('' ${@[2,-1]})
+
+    typeset -g -A _prompt_newt_defaults
+    local val; unset val
+    # See if a setting is defined
+    zstyle -t ${_prompt_newt[ctx]}${(j.:.)ctx} "$style"
+    if [[ $? -ne 2 ]]; then
+        zstyle -s ${_prompt_newt[ctx]}${(j.:.)ctx} "$style" val
+    else
+        # If -x option, then do a simplified wildcard search through
+        # the defaults. Say context is a b c, then this will check for
+        # "a b c", "a b *", "a * *", "* * *", and use the first match.
+        # If not -x option, then only look for a full "a b c" match.
+        ctx[1,1]=()
+        local i
+        (( $+opts[-x] )) && i=$#ctx || i=0
+        while true; do
+            if (( ${+_prompt_newt_defaults[$style $ctx]} )); then
+                val=${_prompt_newt_defaults[$style $ctx]}
+                break
+            fi
+
+            (( i < 1 )) && break
+            ctx[$i]='*'
+            i=$((i - 1))
+        done
+        (( $+val )) || val=$opts[-d]
+    fi
+    print -rn $val
+}
+
 # Preview {{{1
 
 function prompt_newt_preview () {
@@ -14,7 +85,8 @@ function prompt_newt_preview () {
     if (( $#* )); then
         set -- "$*"
     else
-        set -- default ${(ok)prompt_newt_style//#%default} 'cyan black magenta white'
+        set -- default ${(ok)prompt_newt_style//#%default} \
+            'cyan green yellow black red white'
     fi
 
     function prompt_newt_preview_show () {
@@ -36,9 +108,9 @@ function prompt_newt_preview () {
 
         # Fake vcs info if $PWD isn't
         if [[ -z $_prompt_newt[+vcs+] ]]; then
-            local formats; zstyle -s :vcs_info:\* formats formats
-            local str_c; zstyle -s   :vcs_info:\* stagedstr str_c
-            local str_u; zstyle -s   :vcs_info:\* unstagedstr str_u
+            local formats; zstyle -s :vcs_info:\* formats     formats
+            local str_c;   zstyle -s :vcs_info:\* stagedstr   str_c
+            local str_u;   zstyle -s :vcs_info:\* unstagedstr str_u
             zformat -f '_prompt_newt[+vcs+]' "$formats" \
                 m: \
                 u:$str_u \
@@ -139,10 +211,11 @@ Colors indexes are
 13. Black
 14. White
 
-Since the *mono* style specifies 4 colors, the following will
-change the Alert colors to pale yellow on a hot pink background:
+Since the *forest* style specifies 4 colors, the following will
+change the Alert (colors 5 & 6) to pale yellow on a hot pink
+background:
 
-    prompt newt mono 161 227
+    prompt newt forest 161 227
 
 Segments
 --------
@@ -152,6 +225,9 @@ The segments used for left and right prompts can be set with:
     zstyle ':prompt-theme:newt:*' left time context dir
     zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
 
+This change requires the prompt to be set up again. Run `prompt newt`
+for the change to take effect.
+
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
 anything you like, and you can call `prompt newt STYLE` to
@@ -160,7 +236,10 @@ style is `default`. *Segment* is the name of the segment, e.g.,
 `vcs` or `dir`. *State* is segment-specific, and is `default`
 for most segments most of the time.
 
-The settings in use can be shown with `zstyle -L | grep newt`.
+Run `prompt_newt_defaults` to show the built-in settings.
+Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
+To remove an override, run
+`zstyle -d ':prompt-theme:newt:*:the:pattern' [style]`.
 
 Example
 -------
@@ -169,6 +248,8 @@ Example
     zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
     zstyle ':prompt-theme:newt:*:vcs:clobbered'  bg yellow
     zstyle ':prompt-theme:newt:*:vcs:clobbered'  fg red
+    # Revert the first two changes
+    zstyle -d ':prompt-theme:newt:*:vcs:*'
 
     zstyle ':prompt-theme:newt:forest:dir:*'     bg green
     zstyle ':prompt-theme:newt:forest:dir:*'     fg blue
@@ -239,15 +320,11 @@ EOF
 
 # + Add a left segment {{{1
 function prompt_newt_lsegment () {
-    local -A opts
-    opts=(-b none -f none -r 0)
-    zparseopts -D -A opts -K -- b: f: r
-
     local seg_separator
-    prompt_newt_set_lseg_separator "$opts[-b]" "$opts[-f]"
+    prompt_newt_set_lseg_separator "$1" "$2"
 
-    local seg_content="$1"
-    prompt_newt_finalize_segment "$opts[-r]"
+    local seg_content="$3"
+    prompt_newt_finalize_segment
 
     prompt_result=$seg_content$seg_separator$prompt_result
 }
@@ -283,15 +360,11 @@ function prompt_newt_set_lseg_separator () {
 
 # + Add a right segment {{{1
 function prompt_newt_rsegment () {
-    local -A opts
-    opts=(-b none -f none -r 0)
-    zparseopts -D -A opts -K -- b: f: r
-
     local seg_separator
-    prompt_newt_set_rseg_separator "$opts[-b]" "$opts[-f]"
+    prompt_newt_set_rseg_separator "$1" "$2"
 
-    local seg_content="$1"
-    prompt_newt_finalize_segment "$opts[-r]"
+    local seg_content="$3"
+    prompt_newt_finalize_segment
 
     prompt_result+=$seg_separator$seg_content
 }
@@ -393,19 +466,16 @@ function get_terminal_foreground () {
 function prompt_newt_finalize_segment () {
     setopt local_options extended_glob
     typeset -g prompt_b0 prompt_f0 seg_separator seg_content
-    local raw="${1:-0}"
 
-    if (( !$raw )); then
-        zformat -f seg_content "$seg_content" \
-            k:$(prompt_newt_bg_color $prompt_b0) \
-            f:$(prompt_newt_fg_color $prompt_f0)
+    zformat -f seg_content "$seg_content" \
+        k:$(prompt_newt_bg_color $prompt_b0) \
+        f:$(prompt_newt_fg_color $prompt_f0)
 
-        # Trim whitespace
-        seg_content=${${seg_content##[[:space:]]##}%%[[:space:]]##}
+    # Trim whitespace
+    seg_content=${${seg_content##[[:space:]]##}%%[[:space:]]##}
 
-        zstyle -t $_prompt_newt[ctx] compact \
-            || [ -z $seg_content ] || seg_content=" $seg_content "
-    fi
+    zstyle -t $_prompt_newt[ctx] compact \
+        || [ -z $seg_content ] || seg_content=" $seg_content "
 
     function make_truecolor_escape () {
         local n
@@ -533,23 +603,20 @@ function prompt_newt+dir+precmd () {
 }
 
 function prompt_newt+vi_mode+setup () {
-    local mode
-    local ctx=${_prompt_newt[starctx]}:vi_mode
+    prompt_newt_default ''      viins   vi_mode
+    prompt_newt_default NORMAL  vicmd   vi_mode
+    prompt_newt_default REPLACE replace vi_mode
+    prompt_newt_default SEARCH  isearch vi_mode
+    prompt_newt_default VISUAL  visual  vi_mode
+    prompt_newt_default V-LINE  vline   vi_mode
 
-    zstyle $ctx viins   ''
-    zstyle $ctx vicmd   NORMAL
-    zstyle $ctx replace REPLACE
-    zstyle $ctx isearch SEARCH
-    zstyle $ctx visual  VISUAL
-    zstyle $ctx vline   V-LINE
-
-    zstyle ${ctx}:\*      bg $_prompt_newt[color-yellow]
-    zstyle ${ctx}:\*      fg $_prompt_newt[color-black]
-    zstyle ${ctx}:vicmd   bg $_prompt_newt[color-green]
-    zstyle ${ctx}:replace bg $_prompt_newt[color-cyan]
-    zstyle ${ctx}:isearch bg $_prompt_newt[color-magenta]
-    zstyle ${ctx}:visual  bg $_prompt_newt[color-blue]
-    zstyle ${ctx}:vline   bg $_prompt_newt[color-blue]
+    prompt_newt_default "$_prompt_newt[color-yellow]"  bg vi_mode \*
+    prompt_newt_default "$_prompt_newt[color-black]"   fg vi_mode \*
+    prompt_newt_default "$_prompt_newt[color-green]"   bg vi_mode vicmd
+    prompt_newt_default "$_prompt_newt[color-cyan]"    bg vi_mode replace
+    prompt_newt_default "$_prompt_newt[color-magenta]" bg vi_mode isearch
+    prompt_newt_default "$_prompt_newt[color-blue]"    bg vi_mode visual
+    prompt_newt_default "$_prompt_newt[color-blue]"    bg vi_mode vline
 }
 
 function prompt_newt+vi_mode+zle-keymap-select   () { prompt_newt+vi_mode+hook "$@" }
@@ -567,13 +634,12 @@ function prompt_newt+vi_mode+hook () {
     [[ $mode = $_prompt_newt[+vi_mode+state] ]] && return 1
     #prompt_newt_debug "       + ${_prompt_newt[+vi_mode+state]} -> $mode"
     _prompt_newt[+vi_mode+state]=$mode
-    zstyle -s ${_prompt_newt[ctx]}:vi_mode $mode '_prompt_newt[+vi_mode+]'
+    _prompt_newt[+vi_mode+]=$(prompt_newt_zstyle $mode vi_mode)
 }
 
 function prompt_newt+status+setup () {
     _prompt_newt[save_status]=0
-    zstyle ${_prompt_newt[starctx]}:status default $'\u2718 %?'  # ✘
-    zstyle ${_prompt_newt[starctx]}:status zero    ''
+    prompt_newt_default $'\u2718 %?' status default  # ✘
 }
 
 function prompt_newt+status+precmd () {
@@ -581,27 +647,21 @@ function prompt_newt+status+precmd () {
     case $_prompt_newt[save_status] in
         0|20|148)
             # Ignore suspended command
-            zstyle -s ${_prompt_newt[ctx]}:status zero str
+            str=$(prompt_newt_zstyle status zero)
             ;;
         *)
-            zstyle -s ${_prompt_newt[ctx]}:status default str
+            str=$(prompt_newt_zstyle status default)
             ;;
     esac
     zformat -f '_prompt_newt[+status+]' "$str" \
         '?':$_prompt_newt[save_status]
 }
 
-function prompt_newt+jobs+setup () {
-    zstyle ${_prompt_newt[starctx]}:jobs default $'\u2699 %j'  # ⚙
-    zstyle ${_prompt_newt[starctx]}:jobs zero    ''
-}
-
 function prompt_newt+jobs+precmd () {
-    local ctx=${_prompt_newt[ctx]}:jobs
-    local jobs
+    # \u2699 is ⚙
     (( ${(%):-%j} )) \
-        && zstyle -s $ctx default '_prompt_newt[+jobs+]' \
-        || zstyle -s $ctx zero    '_prompt_newt[+jobs+]'
+        && _prompt_newt[+jobs+]=$(prompt_newt_zstyle -d $'\u2699 %j' jobs default) \
+        || _prompt_newt[+jobs+]=$(prompt_newt_zstyle jobs zero)
 }
 
 function prompt_newt+notice+add-note () {
@@ -703,9 +763,9 @@ function prompt_newt_assemble_segments () {
         str=${_prompt_newt[+${segment}+]}
         [[ -n $str || $_prompt_newt[+${segment}+show_empty] = 1 ]] || continue
         ctx=${_prompt_newt[ctx]}:${segment}:${_prompt_newt[+${segment}+state]:-default}
-        zstyle -s $ctx bg bg
-        zstyle -s $ctx fg fg
-        $func -b "$bg" -f "$fg" $str
+        bg=$(prompt_newt_zstyle -x bg "${segment}" "${_prompt_newt[+${segment}+state]:-default}")
+        fg=$(prompt_newt_zstyle -x fg "${segment}" "${_prompt_newt[+${segment}+state]:-default}")
+        $func "$bg" "$fg" $str
     done
 
     if [[ $side = left ]]; then
@@ -804,8 +864,12 @@ function prompt_newt_cleanup () {
     for func in ${(kM)functions:#prompt_newt[[:punct:]]*}; do
         unset "functions[$func]"
     done
+    for func in ${(kM)functions:#_prompt_newt[[:punct:]]*}; do
+        unset "functions[$func]"
+    done
 
     unset _prompt_newt
+    unset _prompt_newt_defaults
 
     autoload prompt_newt_setup
 }
@@ -817,8 +881,8 @@ function prompt_newt_setup () {
     autoload -Uz add-zle-hook-widget
     autoload -Uz vcs_info
 
-    typeset -g -A -H _prompt_newt
-    _prompt_newt=()
+    typeset -g -A -H _prompt_newt=()
+    typeset -g -A -H _prompt_newt_defaults=()
     PS1=
     RPS1=
 
@@ -833,9 +897,9 @@ function prompt_newt_setup () {
 
     typeset -g -A prompt_newt_style
     prompt_newt_style[default]=$colorbgfg
-    prompt_newt_style[mono]='235 242 238 250'
-    prompt_newt_style[meadow]='149 235 81 235'
     prompt_newt_style[forest]='22 229 24 229'
+    prompt_newt_style[meadow]='149 235 81 235'
+    prompt_newt_style[mono]='235 242 238 250 241 197'
 
     if [[ -n $1 && $+prompt_newt_style[$1] > 0 ]]; then
         _prompt_newt[style]=$1
@@ -847,6 +911,8 @@ function prompt_newt_setup () {
             _prompt_newt[style]=default
         fi
     fi
+
+    _prompt_newt[ctx]=:prompt-theme:newt:$_prompt_newt[style]
 
     function $0-set-colors () {
         # Primary segment
@@ -873,45 +939,30 @@ function prompt_newt_setup () {
 
     unfunction $0-set-colors
 
-    # The two-star trick here fixes the sort order relative to
-    # :prompt-theme:newt:somestyle:*:*. See `zstyle` output, e.g.:
-    #
-    # bg
-    #     :prompt-theme:newt:**:vcs:root 1
-    #     :prompt-theme:newt:forest:dir:* 24
-    #     :prompt-theme:newt:**:dir:* 4
-    #     :prompt-theme:newt:forest:*:* 22
-    #
-    # Without the two stars, the last two entries would likely be
-    # swapped (ordering isn't guaranteed)
-    _prompt_newt[starctx]=:prompt-theme:newt:\*\*
+    _prompt_newt[left]=$(prompt_newt_zstyle -d 'time context notice dir' left)
+    _prompt_newt[right]=$(prompt_newt_zstyle -d 'vi_mode status jobs vcs' right)
 
-    _prompt_newt[ctx]=:prompt-theme:newt:$_prompt_newt[style]
+    prompt_newt_default "$_prompt_newt[color-yellow]"  bg vi_mode \*
+    prompt_newt_default "$_prompt_newt[color1]"        bg \*      \*
+    prompt_newt_default "$_prompt_newt[color2]"        fg \*      \*
+    prompt_newt_default "$_prompt_newt[color3]"        bg dir     \*
+    prompt_newt_default "$_prompt_newt[color4]"        fg dir     \*
+    prompt_newt_default "$_prompt_newt[color5]"        bg dir     root
+    prompt_newt_default "$_prompt_newt[color6]"        fg dir     root
 
-    zstyle -s $_prompt_newt[ctx] left  '_prompt_newt[left]'
-    zstyle -s $_prompt_newt[ctx] right '_prompt_newt[right]'
+    prompt_newt_default "$_prompt_newt[color3]"        bg jobs    \*
+    prompt_newt_default "$_prompt_newt[color4]"        fg jobs    \*
+    prompt_newt_default "$_prompt_newt[color5]"        bg status  \*
+    prompt_newt_default "$_prompt_newt[color6]"        fg status  \*
+    prompt_newt_default "$_prompt_newt[color5]"        bg vcs     clobbered
+    prompt_newt_default "$_prompt_newt[color6]"        fg vcs     clobbered
+    prompt_newt_default "$_prompt_newt[color5]"        bg vcs     root
+    prompt_newt_default "$_prompt_newt[color6]"        fg vcs     root
 
-    : ${_prompt_newt[left]:=time context notice dir}
-    : ${_prompt_newt[right]:=vi_mode status jobs vcs}
-
-    zstyle ${_prompt_newt[starctx]}:\*:\*         bg $_prompt_newt[color1]
-    zstyle ${_prompt_newt[starctx]}:\*:\*         fg $_prompt_newt[color2]
-    zstyle ${_prompt_newt[starctx]}:dir:\*        bg $_prompt_newt[color3]
-    zstyle ${_prompt_newt[starctx]}:dir:\*        fg $_prompt_newt[color4]
-    zstyle ${_prompt_newt[starctx]}:dir:root      bg $_prompt_newt[color5]
-    zstyle ${_prompt_newt[starctx]}:dir:root      fg $_prompt_newt[color6]
-    zstyle ${_prompt_newt[starctx]}:jobs:\*       bg $_prompt_newt[color3]
-    zstyle ${_prompt_newt[starctx]}:jobs:\*       fg $_prompt_newt[color4]
-    zstyle ${_prompt_newt[starctx]}:status:\*     bg $_prompt_newt[color5]
-    zstyle ${_prompt_newt[starctx]}:status:\*     fg $_prompt_newt[color6]
-    zstyle ${_prompt_newt[starctx]}:vcs:clobbered bg $_prompt_newt[color5]
-    zstyle ${_prompt_newt[starctx]}:vcs:clobbered fg $_prompt_newt[color6]
-    zstyle ${_prompt_newt[starctx]}:vcs:root      bg $_prompt_newt[color5]
-    zstyle ${_prompt_newt[starctx]}:vcs:root      fg $_prompt_newt[color6]
-    #zstyle ${_prompt_newt[starctx]}:vcs:action    bg $_prompt_newt[color-cyan]
-    #zstyle ${_prompt_newt[starctx]}:vcs:action    fg $_prompt_newt[color-black]
-    #zstyle ${_prompt_newt[starctx]}:vcs:dirty     bg $_prompt_newt[color-magenta]
-    #zstyle ${_prompt_newt[starctx]}:vcs:dirty     fg $_prompt_newt[color-black]
+    #prompt_newt_default "$_prompt_newt[color-cyan]"    bg vcs     action
+    #prompt_newt_default "$_prompt_newt[color-black]"   fg vcs     action
+    #prompt_newt_default "$_prompt_newt[color-magenta]" bg vcs     dirty
+    #prompt_newt_default "$_prompt_newt[color-black]"   fg vcs     dirty
 
     prompt_newt_do_segments setup ${=_prompt_newt[left]}
     prompt_newt_do_segments setup ${=_prompt_newt[right]}

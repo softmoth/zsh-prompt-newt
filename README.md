@@ -41,11 +41,14 @@ Colors indexes are
 10. Blue
 11. Magenta
 12. Cyan
+13. Black
+14. White
 
-Since the *mono* style specifies 4 colors, the following will
-change the Alert colors to pale yellow on a hot pink background:
+Since the *forest* style specifies 4 colors, the following will
+change the Alert (colors 5 & 6) to pale yellow on a hot pink
+background:
 
-    prompt newt mono 161 227
+    prompt newt forest 161 227
 
 Segments
 --------
@@ -55,6 +58,9 @@ The segments used for left and right prompts can be set with:
     zstyle ':prompt-theme:newt:*' left time context dir
     zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
 
+This change requires the prompt to be set up again. Run `prompt newt`
+for the change to take effect.
+
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
 anything you like, and you can call `prompt newt STYLE` to
@@ -63,7 +69,10 @@ style is `default`. *Segment* is the name of the segment, e.g.,
 `vcs` or `dir`. *State* is segment-specific, and is `default`
 for most segments most of the time.
 
-The settings in use can be shown with `zstyle -L | grep newt`.
+Run `prompt_newt_defaults` to show the built-in settings.
+Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
+To remove an override, run
+`zstyle -d ':prompt-theme:newt:*:the:pattern' [style]`.
 
 Example
 -------
@@ -72,6 +81,8 @@ Example
     zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
     zstyle ':prompt-theme:newt:*:vcs:clobbered'  bg yellow
     zstyle ':prompt-theme:newt:*:vcs:clobbered'  fg red
+    # Revert the first two changes
+    zstyle -d ':prompt-theme:newt:*:vcs:*'
 
     zstyle ':prompt-theme:newt:forest:dir:*'     bg green
     zstyle ':prompt-theme:newt:forest:dir:*'     fg blue
