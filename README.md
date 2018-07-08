@@ -61,6 +61,8 @@ The segments used for left and right prompts can be set with:
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
 
+### Styling
+
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
 anything you like, and you can call `prompt newt STYLE` to
@@ -74,8 +76,7 @@ Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
 To remove an override, run
 `zstyle -d ':prompt-theme:newt:*:the:pattern' [style]`.
 
-Example
--------
+### Examples
 
     zstyle ':prompt-theme:newt:*:vcs:*'          bg blue
     zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
@@ -91,8 +92,24 @@ Example
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
     zstyle ':prompt-theme:newt:*' right none
 
-Vi-mode settings
-----------------
+### Exit status
+
+The `status` segment states are `ok`, `error` and `suspended`. By default
+only `error` status is shown. To always show a status, set:
+
+    zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
+    zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
+
+### Version control
+
+The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
+and `default`. Most of the display is controlled by `VCS_Info`:
+
+    # See zshcontrib(1) for more options related to version control
+    zstyle ':vcs_info:*' enable git cvs svn bzr hg
+    zstyle -L ':vcs_info:*'
+
+### Vi mode
 
 The `vi_mode` segment has settings to configure the colors and
 text of the mode indicator. The recognized states are `viins`,
@@ -102,16 +119,6 @@ the `vicmd` mode can be styled with:
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
-
-Version Control settings
-----------------
-
-The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
-and `default`. Most of the display is controlled by `VCS_Info`:
-
-    # See zshcontrib(1) for more options related to version control
-    zstyle ':vcs_info:*' enable git cvs svn bzr hg
-    zstyle -L ':vcs_info:*'
 
 Truecolor support
 -----------------

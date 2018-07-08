@@ -228,6 +228,8 @@ The segments used for left and right prompts can be set with:
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
 
+### Styling
+
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
 anything you like, and you can call `prompt newt STYLE` to
@@ -241,8 +243,7 @@ Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
 To remove an override, run
 `zstyle -d ':prompt-theme:newt:*:the:pattern' [style]`.
 
-Example
--------
+### Examples
 
     zstyle ':prompt-theme:newt:*:vcs:*'          bg blue
     zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
@@ -258,8 +259,24 @@ Example
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
     zstyle ':prompt-theme:newt:*' right none
 
-Vi-mode settings
-----------------
+### Exit status
+
+The `status` segment states are `ok`, `error` and `suspended`. By default
+only `error` status is shown. To always show a status, set:
+
+    zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
+    zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
+
+### Version control
+
+The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
+and `default`. Most of the display is controlled by `VCS_Info`:
+
+    # See zshcontrib(1) for more options related to version control
+    zstyle ':vcs_info:*' enable git cvs svn bzr hg
+    zstyle -L ':vcs_info:*'
+
+### Vi mode
 
 The `vi_mode` segment has settings to configure the colors and
 text of the mode indicator. The recognized states are `viins`,
@@ -269,16 +286,6 @@ the `vicmd` mode can be styled with:
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
-
-Version Control settings
-----------------
-
-The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
-and `default`. Most of the display is controlled by `VCS_Info`:
-
-    # See zshcontrib(1) for more options related to version control
-    zstyle ':vcs_info:*' enable git cvs svn bzr hg
-    zstyle -L ':vcs_info:*'
 
 Truecolor support
 -----------------
@@ -639,22 +646,36 @@ function prompt_newt+vi_mode+hook () {
 
 function prompt_newt+status+setup () {
     _prompt_newt[save_status]=0
-    prompt_newt_default $'\u2718 %?' status default  # ✘
+    prompt_newt_default $'\u2718 %?' status error      # ✘
+    prompt_newt_default "$_prompt_newt[color5]"        bg status  error
+    prompt_newt_default "$_prompt_newt[color6]"        fg status  error
+    #prompt_newt_default $'\u2713'    status ok         # ✓
+    prompt_newt_default "$_prompt_newt[color-green]"   fg status  ok
+    #prompt_newt_default $'\u25c6'    status suspended  # ◆
+    prompt_newt_default "$_prompt_newt[color-yellow]"  fg status  suspended
+}
+
+function prompt_newt+status+preexec () {
+    # A command is being run, so clear flag
+    unset '_prompt_newt[+status+done]'
 }
 
 function prompt_newt+status+precmd () {
-    local str
+    local state
     case $_prompt_newt[save_status] in
-        0|20|148)
-            # Ignore suspended command
-            str=$(prompt_newt_zstyle status zero)
-            ;;
-        *)
-            str=$(prompt_newt_zstyle status default)
-            ;;
+        0)      state=ok ;;
+        20|148) state=suspended ;;
+        *)      state=error ;;
     esac
-    zformat -f '_prompt_newt[+status+]' "$str" \
+
+    # Ignore if no new command has been run since last status was shown
+    (( $+_prompt_newt[+status+done] )) && state=nocommand
+
+    _prompt_newt[+status+state]=$state
+    zformat -f '_prompt_newt[+status+]' "$(prompt_newt_zstyle status $state)" \
         '?':$_prompt_newt[save_status]
+
+    _prompt_newt[+status+done]=1
 }
 
 function prompt_newt+jobs+precmd () {
@@ -758,14 +779,16 @@ function prompt_newt_assemble_segments () {
         && func=prompt_newt_lsegment \
         || func=prompt_newt_rsegment
 
-    local segment bg fg str ctx
+    local segment str state
     for segment in "$@"; do
         str=${_prompt_newt[+${segment}+]}
+        state=${_prompt_newt[+${segment}+state]:-default}
         [[ -n $str || $_prompt_newt[+${segment}+show_empty] = 1 ]] || continue
-        ctx=${_prompt_newt[ctx]}:${segment}:${_prompt_newt[+${segment}+state]:-default}
-        bg=$(prompt_newt_zstyle -x bg "${segment}" "${_prompt_newt[+${segment}+state]:-default}")
-        fg=$(prompt_newt_zstyle -x fg "${segment}" "${_prompt_newt[+${segment}+state]:-default}")
-        $func "$bg" "$fg" $str
+
+        $func \
+            "$(prompt_newt_zstyle -x bg "$segment" "$state")" \
+            "$(prompt_newt_zstyle -x fg "$segment" "$state")" \
+            $str
     done
 
     if [[ $side = left ]]; then
@@ -899,7 +922,7 @@ function prompt_newt_setup () {
     prompt_newt_style[default]=$colorbgfg
     prompt_newt_style[forest]='22 229 24 229'
     prompt_newt_style[meadow]='149 235 81 235'
-    prompt_newt_style[mono]='235 242 238 250 241 197'
+    prompt_newt_style[mono]='235 242 238 250 233 197'
 
     if [[ -n $1 && $+prompt_newt_style[$1] > 0 ]]; then
         _prompt_newt[style]=$1
@@ -952,8 +975,6 @@ function prompt_newt_setup () {
 
     prompt_newt_default "$_prompt_newt[color3]"        bg jobs    \*
     prompt_newt_default "$_prompt_newt[color4]"        fg jobs    \*
-    prompt_newt_default "$_prompt_newt[color5]"        bg status  \*
-    prompt_newt_default "$_prompt_newt[color6]"        fg status  \*
     prompt_newt_default "$_prompt_newt[color5]"        bg vcs     clobbered
     prompt_newt_default "$_prompt_newt[color6]"        fg vcs     clobbered
     prompt_newt_default "$_prompt_newt[color5]"        bg vcs     root
