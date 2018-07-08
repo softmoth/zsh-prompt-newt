@@ -456,7 +456,7 @@ function get_terminal_background () {
 
     zstyle -s :prompt-theme terminal-background color
     : ${color:=${COLORFGBG#*;}}
-    : ${color:=0}
+    : ${color:=black}
     print -n $color
 }
 
@@ -465,7 +465,7 @@ function get_terminal_foreground () {
 
     zstyle -s :prompt-theme terminal-foreground color
     : ${color:=${COLORFGBG%%;*}}
-    : ${color:=7}
+    : ${color:=white}
     print -n $color
 }
 
@@ -782,8 +782,10 @@ function prompt_newt_assemble_segments () {
     local segment str state
     for segment in "$@"; do
         str=${_prompt_newt[+${segment}+]}
-        state=${_prompt_newt[+${segment}+state]:-default}
+
         [[ -n $str || $_prompt_newt[+${segment}+show_empty] = 1 ]] || continue
+
+        state=${_prompt_newt[+${segment}+state]:-default}
 
         $func \
             "$(prompt_newt_zstyle -x bg "$segment" "$state")" \
@@ -920,9 +922,13 @@ function prompt_newt_setup () {
 
     typeset -g -A prompt_newt_style
     prompt_newt_style[default]=$colorbgfg
+    prompt_newt_style[denver]="'' 202 '' 33 '' 196"
     prompt_newt_style[forest]='22 229 24 229'
     prompt_newt_style[meadow]='149 235 81 235'
-    prompt_newt_style[mono]='235 242 238 250 233 197'
+    prompt_newt_style[mono]='235 242 238 250 235 197'
+
+    # Env variable can be used in .zshrc, etc.
+    export PROMPT_NEWT_STYLE=${(j. .)${(qq)@}}
 
     if [[ -n $1 && $+prompt_newt_style[$1] > 0 ]]; then
         _prompt_newt[style]=$1
@@ -958,7 +964,8 @@ function prompt_newt_setup () {
         _prompt_newt[color-white]=${14-white}
     }
 
-    $0-set-colors ${(z)prompt_newt_style[${_prompt_newt[style]}]} "$@"
+    local -a style=( ${(z)prompt_newt_style[${_prompt_newt[style]}]} )
+    $0-set-colors "${(Q)style[@]}" "$@"
 
     unfunction $0-set-colors
 
@@ -973,8 +980,10 @@ function prompt_newt_setup () {
     prompt_newt_default "$_prompt_newt[color5]"        bg dir     root
     prompt_newt_default "$_prompt_newt[color6]"        fg dir     root
 
-    prompt_newt_default "$_prompt_newt[color3]"        bg jobs    \*
-    prompt_newt_default "$_prompt_newt[color4]"        fg jobs    \*
+    #prompt_newt_default "$_prompt_newt[color3]"        bg jobs    \*
+    #prompt_newt_default "$_prompt_newt[color4]"        fg jobs    \*
+    prompt_newt_default "$_prompt_newt[color3]"        bg vcs     \*
+    prompt_newt_default "$_prompt_newt[color4]"        fg vcs     \*
     prompt_newt_default "$_prompt_newt[color5]"        bg vcs     clobbered
     prompt_newt_default "$_prompt_newt[color6]"        fg vcs     clobbered
     prompt_newt_default "$_prompt_newt[color5]"        bg vcs     root

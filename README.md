@@ -13,7 +13,7 @@ Styles
 ------
 
 Newt comes with these pre-defined styles:
-*default, forest, meadow, mono*.
+*default, denver, forest, meadow, mono*.
 Use a style with `prompt newt meadow`.
 
 Create a bespoke style with `prompt newt blue white magenta`, giving a list of
