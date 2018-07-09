@@ -93,7 +93,7 @@ function prompt_newt_preview () {
         prompt_newt_assemble_segments left ${(Oa)=_prompt_newt[left]}
         prompt_newt_assemble_segments right ${=_prompt_newt[right]}
         [[ -o promptcr ]] && print -n $'\r'; :
-        print -P "${PS1}$*%-0<<${(l:COLUMNS:: :)}${RPS1}"
+        print -P "${PS1}$*%-1<<${(l:COLUMNS:: :)}${RPS1}"
     }
 
     function prompt_newt_preview_style () {
