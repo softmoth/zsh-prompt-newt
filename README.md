@@ -16,15 +16,16 @@ Newt comes with these pre-defined styles:
 *default, denver, forest, meadow, mono*.
 Use a style with `prompt newt meadow`.
 
-Create a bespoke style with `prompt newt blue white magenta`, giving a list of
-colors. Each color can be
+Create a `bespoke` style with `prompt newt blue white magenta`, giving
+a list of colors. Each color can be
 
-- one of `''`, *black, red, yellow, green, blue, magenta, cyan, white*, or
+- `''`, meaning the terminal's default background / foreground, or
+- *black, red, yellow, green, blue, magenta, cyan, white*, or
 - a color number supported by your terminal, or
 - a truecolor specification as described in **Truecolor support** below.
 
 These styles are simply shorthand for the `zstyle` configuration, as
-described in **Segments** below. So the style can be used to get most
+described in **Styling** below. So the style can be used to get most
 things as you like, and then individual elements can be refined further.
 
 Colors indexes are
@@ -50,18 +51,8 @@ background:
 
     prompt newt forest 161 227
 
-Segments
---------
-
-The segments used for left and right prompts can be set with:
-
-    zstyle ':prompt-theme:newt:*' left time context dir
-    zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
-
-This change requires the prompt to be set up again. Run `prompt newt`
-for the change to take effect.
-
-### Styling
+Styling
+-------
 
 Segments can be configured with the context
 `:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
@@ -92,6 +83,17 @@ To remove an override, run
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
     zstyle ':prompt-theme:newt:*' right none
 
+Segments
+--------
+
+The segments used for left and right prompts can be set with:
+
+    zstyle ':prompt-theme:newt:*' left time context dir
+    zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
+
+This change requires the prompt to be set up again. Run `prompt newt`
+for the change to take effect.
+
 ### Exit status
 
 The `status` segment states are `ok`, `error` and `suspended`. By default
@@ -119,6 +121,11 @@ the `vicmd` mode can be styled with:
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
+
+NOTE: Only `viins` and `vicmd` states are available by default.
+The others require the [zsh-vim-mode][] plugin.
+
+[zsh-vim-mode]: https://github.com/softmoth/zsh-vim-mode
 
 Truecolor support
 -----------------
