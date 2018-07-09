@@ -125,10 +125,15 @@ function prompt_newt_preview () {
         _prompt_newt[+jobs+]=$'\u2699 2'
         _prompt_newt[+context+]=daffy
         _prompt_newt[+vcs+]=
-        _prompt_newt[+vi_mode+]=SEARCH
-        _prompt_newt[+vi_mode+state]=isearch
+        _prompt_newt[+vi_mode+]=$fake_vi[2]
+        _prompt_newt[+vi_mode+state]=$fake_vi[1]
         prompt_newt_preview_show "rm -rf /  # remote host, root, vi-mode, jobs"
+
+        fake_vi[1,2]=()
     }
+
+    local -a fake_vi=( vicmd  NORMAL  isearch SEARCH  replace REPLACE
+                       visual VISUAL  vline   V-LINE  viins   '' )
 
     for style in "$@"; do
         prompt_newt_preview_style $=style
@@ -624,13 +629,18 @@ function prompt_newt+vi_mode+setup () {
     prompt_newt_default VISUAL  visual  vi_mode
     prompt_newt_default V-LINE  vline   vi_mode
 
-    prompt_newt_default "$_prompt_newt[color-yellow]"  bg vi_mode \*
-    prompt_newt_default "$_prompt_newt[color-black]"   fg vi_mode \*
-    prompt_newt_default "$_prompt_newt[color-green]"   bg vi_mode vicmd
-    prompt_newt_default "$_prompt_newt[color-cyan]"    bg vi_mode replace
-    prompt_newt_default "$_prompt_newt[color-magenta]" bg vi_mode isearch
-    prompt_newt_default "$_prompt_newt[color-blue]"    bg vi_mode visual
-    prompt_newt_default "$_prompt_newt[color-blue]"    bg vi_mode vline
+    local vary const const_color
+    [[ $_prompt_newt[color1] = '' ]] \
+        && vary=fg const=bg const_color='' \
+        || vary=bg const=fg const_color='bg:'
+
+    prompt_newt_default "$const_color"                 $const vi_mode \*
+    prompt_newt_default "$_prompt_newt[color-yellow]"  $vary  vi_mode \*
+    prompt_newt_default "$_prompt_newt[color-green]"   $vary  vi_mode vicmd
+    prompt_newt_default "$_prompt_newt[color-cyan]"    $vary  vi_mode replace
+    prompt_newt_default "$_prompt_newt[color-magenta]" $vary  vi_mode isearch
+    prompt_newt_default "$_prompt_newt[color-blue]"    $vary  vi_mode visual
+    prompt_newt_default "$_prompt_newt[color-blue]"    $vary  vi_mode vline
 }
 
 function prompt_newt+vi_mode+zle-keymap-select   () { prompt_newt+vi_mode+hook "$@" }
