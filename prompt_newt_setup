@@ -118,16 +118,17 @@ function prompt_newt_preview () {
                 b:master
             _prompt_newt[+dir+]='~/code'
         fi
-        prompt_newt_preview_show "vi README.txt   # Default user, local host, git"
+        _prompt_newt[+jobs+]=$'\u2699 2'
+        prompt_newt_preview_show "vi README.txt   # jobs, git"
 
         _prompt_newt[+dir+]=/etc
         _prompt_newt[+dir+state]=root
-        _prompt_newt[+jobs+]=$'\u2699 2'
+        _prompt_newt[+jobs+]=
         _prompt_newt[+context+]=daffy
         _prompt_newt[+vcs+]=
         _prompt_newt[+vi_mode+]=$fake_vi[2]
         _prompt_newt[+vi_mode+state]=$fake_vi[1]
-        prompt_newt_preview_show "rm -rf /  # remote host, root, vi-mode, jobs"
+        prompt_newt_preview_show "rm -rf /  # remote host, root, vi-mode"
 
         fake_vi[1,2]=()
     }
