@@ -5,15 +5,16 @@ Newt ZSH Theme
 >   “A newt?”  
 >   “… I got better.”  
 
-![Newt Theme Preview][preview]
+![Newt Theme Demo][demo]
 
-[preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
+[demo]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 
 Styles
 ------
 
 Newt comes with these pre-defined styles:
 *default, denver, forest, meadow, mono*.
+
 Use a style with `prompt newt meadow`.
 
 Create a `bespoke` style with `prompt newt blue white magenta`, giving
@@ -23,6 +24,10 @@ a list of colors. Each color can be
 - *black, red, yellow, green, blue, magenta, cyan, white*, or
 - a color number supported by your terminal, or
 - a truecolor specification as described in **Truecolor support** below.
+
+![Newt Theme Preview][preview]
+
+[preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 
 These styles are simply shorthand for the `zstyle` configuration, as
 described in **Styling** below. So the style can be used to get most
