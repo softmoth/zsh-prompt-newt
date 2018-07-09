@@ -85,7 +85,7 @@ function prompt_newt_preview () {
     if (( $#* )); then
         set -- "$*"
     else
-        set -- default ${(ok)prompt_newt_style//#%default} \
+        set -- default ${(ok)_prompt_newt_style//#%default} \
             'cyan green yellow black red white'
     fi
 
@@ -143,7 +143,7 @@ function prompt_newt_preview () {
 
 function prompt_newt_help () {
     local br='  '  # Markdown line break
-    local styles='default, '${(j., .)${(ok)prompt_newt_style//#%default}}
+    local styles='default, '${(j., .)${(ok)_prompt_newt_style//#%default}}
 
     local pager
     if [[ -t 1 ]]; then
@@ -509,7 +509,7 @@ function prompt_newt_finalize_segment () {
 # VCS_Info hooks for git {{{1
 
 # + $GITDIR {{{1
-function +vi-git-show-gitdir () {
+function +vi-newt-show-gitdir () {
     local inner
     if (( $+GIT_DIR )); then
         () {
@@ -531,7 +531,7 @@ function +vi-git-show-gitdir () {
 }
 
 # + Tracking remote branch? {{{1
-function +vi-git-remotebranch () {
+function +vi-newt-remotebranch () {
     local remote
 
     # Are we on a remote-tracking branch?
@@ -548,7 +548,7 @@ function +vi-git-remotebranch () {
 }
 
 # + New untracked files? {{{1
-function +vi-git-untracked () {
+function +vi-newt-untracked () {
     if [[ $(${vcs_comm[cmd]} rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
         && ${vcs_comm[cmd]} status --porcelain | command grep -m 1 '^??' &>/dev/null
     then
@@ -557,13 +557,13 @@ function +vi-git-untracked () {
     fi
 }
 
-function +vi-final-preparations () {
+function +vi-newt-finalize () {
     [[ -n $hook_com[unstaged] ]] && _prompt_newt[+vcs+dirty]=1
     [[ -n $hook_com[action] ]]   && _prompt_newt[+vcs+action]=1
 }
 
 # + Ahead / behind of upstream? {{{1
-function +vi-git-upstream () {
+function +vi-newt-upstream () {
     local b; b="${hook_com[branch_orig]}@{upstream}"
 
     local ahead behind
@@ -714,14 +714,14 @@ function prompt_newt+vcs+setup () {
     zstyle :vcs_info:\* actionformats $'\ue0a0 %b|%a%f'     # 
 
     zstyle :vcs_info:git\*+post-backend:\* hooks \
-        git-show-gitdir \
-        git-remotebranch \
-        git-upstream \
+        newt-show-gitdir \
+        newt-remotebranch \
+        newt-upstream \
         # ∴
 
     zstyle :vcs_info:git\*+set-message:\* hooks \
-        git-untracked \
-        final-preparations \
+        newt-untracked \
+        newt-finalize \
         # ∴
 }
 
@@ -899,9 +899,38 @@ function prompt_newt_cleanup () {
     for func in ${(kM)functions:#_prompt_newt[[:punct:]]*}; do
         unset "functions[$func]"
     done
+    for func in ${(kM)functions:#+vi-newt-*}; do
+        unset "functions[$func]"
+    done
+
+    local -a vcs_hooks
+    vcs_hooks=("${${(f)$(zstyle -L ':vcs_info:*' hooks)}[@]}")
+    local hook a
+    for hook in $vcs_hooks; do
+        # a=(zstyle :vcs_info:\*+whatever:\* hooks hook-func-1 ...)
+        a=("${(Qz)hook[@]}")
+
+        local i=$#a
+        while ((i > 3)); do
+            [[ $a[$i] = newt-* ]] && a[$i]=()
+            i=$((i-1))
+        done
+
+        # If just (zstyle ':vcs_info:*' hooks), delete the style
+        (( $#a <= 3 )) && a[2,0]=(-d)
+
+        # It is this already. But it makes me feel better to run a
+        # hard-coded command rather than accept outside text
+        a[1]=zstyle
+
+        # Actually run the command
+        $a
+    done
 
     unset _prompt_newt
     unset _prompt_newt_defaults
+    unset _prompt_newt_style
+    unset PROMPT_NEWT_STYLE
 
     autoload prompt_newt_setup
 }
@@ -927,17 +956,17 @@ function prompt_newt_setup () {
     # Inverse colors for defaults
     colorbgfg=( $(get_terminal_foreground) $(get_terminal_background) )
 
-    typeset -g -A prompt_newt_style
-    prompt_newt_style[default]=$colorbgfg
-    prompt_newt_style[denver]="'' 202 '' 33 '' 196"
-    prompt_newt_style[forest]='22 229 24 229'
-    prompt_newt_style[meadow]='149 235 81 235'
-    prompt_newt_style[mono]='235 242 238 250 235 197'
+    typeset -g -A _prompt_newt_style
+    _prompt_newt_style[default]=$colorbgfg
+    _prompt_newt_style[denver]="'' 202 '' 33 '' 196"
+    _prompt_newt_style[forest]='22 229 24 229'
+    _prompt_newt_style[meadow]='149 235 81 235'
+    _prompt_newt_style[mono]='235 242 238 250 235 197'
 
     # Env variable can be used in .zshrc, etc.
     export PROMPT_NEWT_STYLE=${(j. .)${(qq)@}}
 
-    if [[ -n $1 && $+prompt_newt_style[$1] > 0 ]]; then
+    if [[ -n $1 && $+_prompt_newt_style[$1] > 0 ]]; then
         _prompt_newt[style]=$1
         shift
     else
@@ -971,7 +1000,7 @@ function prompt_newt_setup () {
         _prompt_newt[color-white]=${14-white}
     }
 
-    local -a style=( ${(z)prompt_newt_style[${_prompt_newt[style]}]} )
+    local -a style=( ${(z)_prompt_newt_style[${_prompt_newt[style]}]} )
     $0-set-colors "${(Q)style[@]}" "$@"
 
     unfunction $0-set-colors
