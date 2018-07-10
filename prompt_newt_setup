@@ -826,7 +826,9 @@ function prompt_newt_preview () {
             __newt[+dir+]='~/code'
         fi
         __newt[+jobs+]=$'\u2699 2'
-        __newt_preview_show "vi README.txt   # jobs, git"
+        local msg='vi README.txt'
+        (( ${COLUMNS:-80} > 78)) && msg+='   # jobs, git'
+        __newt_preview_show $msg
 
         __newt[+dir+]=/etc
         __newt[+dir+state]=root
@@ -835,7 +837,9 @@ function prompt_newt_preview () {
         __newt[+vcs+]=
         __newt[+vi_mode+]=$fake_vi[2]
         __newt[+vi_mode+state]=$fake_vi[1]
-        __newt_preview_show "rm -rf /  # remote host, root, vi-mode"
+        local msg='rm -rf /  # root'
+        (( ${COLUMNS:-80} > 78)) && msg+=', remote host, vi-mode'
+        __newt_preview_show $msg
 
         fake_vi[1,2]=()
     }
