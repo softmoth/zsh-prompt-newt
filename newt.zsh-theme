@@ -524,6 +524,8 @@ function __newt_finalize_segment () {
 
 # Styling: setting defaults, getting values {{{1
 
+# Print the defaults, using zstyle format so it is easy to copy and
+# modify to create a zstyle override.
 function prompt_newt_defaults () {
     local -a z
     local -i m1 m2
@@ -548,11 +550,6 @@ function prompt_newt_defaults () {
 }
 
 function __newt_default () {
-    if [[ $#* = 0 ]]; then
-        prompt_newt_defaults
-        return
-    fi
-
     local -A opts
     zparseopts -A opts -D - d
     (( $+opts[-d] )) \
