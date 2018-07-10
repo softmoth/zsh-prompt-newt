@@ -7,7 +7,7 @@ zmodload zsh/mathfunc
 # Prompt Segments {{{1
 
 # + context: user@host {{{1
-function __newt+context+precmd () {
+__newt+context+precmd () {
     local u=;
     local h="${(%):-%m}"
 
@@ -28,7 +28,7 @@ function __newt+context+precmd () {
 }
 
 # + dir: Current directory {{{1
-function __newt+dir+precmd () {
+__newt+dir+precmd () {
     __newt[+dir+]='%4~'
 
     [[ $EUID = 0 ]] \
@@ -37,16 +37,16 @@ function __newt+dir+precmd () {
 }
 
 # + exec_time: Execution time of last command {{{1
-function __newt+exec_time+setup () {
+__newt+exec_time+setup () {
     __newt_default $'\u9593%t' long exec_time  # 間
     __newt_default 5 threshold exec_time
 }
 
-function __newt+exec_time+preexec () {
+__newt+exec_time+preexec () {
     __newt[+exec_time+start]=$EPOCHREALTIME
 }
 
-function __newt+exec_time+precmd () {
+__newt+exec_time+precmd () {
     local state
 
     local stop=$EPOCHREALTIME
@@ -96,7 +96,7 @@ __newt_human_time () {
 }
 
 # + jobs: Background jobs {{{1
-function __newt+jobs+precmd () {
+__newt+jobs+precmd () {
     # \u2699 is ⚙
     (( ${(%):-%j} )) \
         && __newt[+jobs+]=$(__newt_zstyle -d $'\u2699 %j' jobs default) \
@@ -104,15 +104,15 @@ function __newt+jobs+precmd () {
 }
 
 # + none: Placeholder to do nothing {{{1
-function __newt+none+setup () {
+__newt+none+setup () {
 }
 
 # + notice: Generic info display {{{1
-function __newt+notice+add-note () {
+__newt+notice+add-note () {
     __newt[+notice+notes]+=" $*"
 }
 
-function __newt+notice+precmd () {
+__newt+notice+precmd () {
     __newt[+notice+]=$__newt[+notice+notes]
     unset '__newt[+notice+notes]'
 }
@@ -120,11 +120,11 @@ function __newt+notice+precmd () {
 # + prompt_time: How long the prompt takes to draw {{{1
 
 # Install this precmd function specially so it gets called first
-function __newt_prompt_time_precmd {
+__newt_prompt_time_precmd () {
     __newt[+prompt_time+start]=$EPOCHREALTIME
 }
 
-function __newt+prompt_time+setup () {
+__newt+prompt_time+setup () {
     precmd_functions[1,0]=(__newt_prompt_time_precmd)
     local i=2
     while (( i <= $#precmd_functions )); do
@@ -137,7 +137,7 @@ function __newt+prompt_time+setup () {
     done
 }
 
-function __newt+prompt_time+zle-line-init () {
+__newt+prompt_time+zle-line-init () {
     local now=$EPOCHREALTIME
     local elapsed=$((now - __newt[+prompt_time+start]))
     printf -v '__newt[+prompt_time+]' '%.*f' \
@@ -146,7 +146,7 @@ function __newt+prompt_time+zle-line-init () {
 
 
 # + status: Exit status of last command {{{1
-function __newt+status+setup () {
+__newt+status+setup () {
     __newt[save_status]=0
     __newt_default $'\u2718 %?' status error      # ✘
     __newt_default "$__newt[color5]"        bg status  error
@@ -157,12 +157,12 @@ function __newt+status+setup () {
     __newt_default "$__newt[color-yellow]"  fg status  suspended
 }
 
-function __newt+status+preexec () {
+__newt+status+preexec () {
     # A command is being run, so clear flag
     unset '__newt[+status+done]'
 }
 
-function __newt+status+precmd () {
+__newt+status+precmd () {
     local state
     case $__newt[save_status] in
         0)      state=ok ;;
@@ -181,12 +181,12 @@ function __newt+status+precmd () {
 }
 
 # + time: Current time {{{1
-function __newt+time+precmd () {
+__newt+time+precmd () {
     __newt[+time+]='%T'
 }
 
 # + vcs: Version control {{{1
-function __newt+vcs+setup () {
+__newt+vcs+setup () {
     local green=$(__newt_fg_color $__newt[color-green])
     local yellow=$(__newt_fg_color $__newt[color-yellow])
     local red=$(__newt_fg_color $__newt[color-red])
@@ -210,7 +210,7 @@ function __newt+vcs+setup () {
         # ∴
 }
 
-function __newt+vcs+precmd () {
+__newt+vcs+precmd () {
     vcs_info
 
     if (( $+__newt[+vcs+clobber] )); then
@@ -235,7 +235,7 @@ function __newt+vcs+precmd () {
 
 
 # + vi_mode: Line editing mode {{{1
-function __newt+vi_mode+setup () {
+__newt+vi_mode+setup () {
     __newt_default ''      viins   vi_mode
     __newt_default NORMAL  vicmd   vi_mode
     __newt_default REPLACE replace vi_mode
@@ -257,12 +257,12 @@ function __newt+vi_mode+setup () {
     __newt_default "$__newt[color-blue]"    $vary  vi_mode vline
 }
 
-function __newt+vi_mode+zle-keymap-select   () { __newt+vi_mode+hook "$@" }
-function __newt+vi_mode+zle-isearch-update  () { __newt+vi_mode+hook "$@" }
-function __newt+vi_mode+zle-isearch-exit    () { __newt+vi_mode+hook "$@" }
-function __newt+vi_mode+zle-line-pre-redraw () { __newt+vi_mode+hook "$@" }
+__newt+vi_mode+zle-keymap-select   () { __newt+vi_mode+hook "$@" }
+__newt+vi_mode+zle-isearch-update  () { __newt+vi_mode+hook "$@" }
+__newt+vi_mode+zle-isearch-exit    () { __newt+vi_mode+hook "$@" }
+__newt+vi_mode+zle-line-pre-redraw () { __newt+vi_mode+hook "$@" }
 
-function __newt+vi_mode+hook () {
+__newt+vi_mode+hook () {
     local mode="${VIM_MODE_KEYMAP-$KEYMAP}"
     #__newt_debug "vi_mode: ${__newt[+vi_mode+state]} -> $mode [$@]"
     case $mode in
@@ -278,7 +278,7 @@ function __newt+vi_mode+hook () {
 # VCS_Info hooks for git {{{1
 
 # + $GITDIR {{{1
-function +vi-newt-show-gitdir () {
++vi-newt-show-gitdir () {
     local inner
     if (( $+GIT_DIR )); then
         () {
@@ -300,7 +300,7 @@ function +vi-newt-show-gitdir () {
 }
 
 # + Tracking remote branch? {{{1
-function +vi-newt-remotebranch () {
++vi-newt-remotebranch () {
     local remote
 
     # Are we on a remote-tracking branch?
@@ -317,7 +317,7 @@ function +vi-newt-remotebranch () {
 }
 
 # + New untracked files? {{{1
-function +vi-newt-untracked () {
++vi-newt-untracked () {
     if [[ $(${vcs_comm[cmd]} rev-parse --is-inside-work-tree 2> /dev/null) = 'true' ]] \
         && ${vcs_comm[cmd]} status --porcelain | command grep -m 1 '^??' &>/dev/null
     then
@@ -326,13 +326,13 @@ function +vi-newt-untracked () {
     fi
 }
 
-function +vi-newt-finalize () {
++vi-newt-finalize () {
     [[ -n $hook_com[unstaged] ]] && __newt[+vcs+dirty]=1
     [[ -n $hook_com[action] ]]   && __newt[+vcs+action]=1
 }
 
 # + Ahead / behind of upstream? {{{1
-function +vi-newt-upstream () {
++vi-newt-upstream () {
     local b; b="${hook_com[branch_orig]}@{upstream}"
 
     local ahead behind
@@ -350,7 +350,7 @@ function +vi-newt-upstream () {
 # Drawing Powerline segments {{{1
 
 # + Add a left segment {{{1
-function __newt_lsegment () {
+__newt_lsegment () {
     local seg_separator
     __newt_set_lseg_separator "$1" "$2"
 
@@ -361,7 +361,7 @@ function __newt_lsegment () {
 }
 
 # ++ Determine how to draw the left segment separator {{{1
-function __newt_set_lseg_separator () {
+__newt_set_lseg_separator () {
     typeset -g seg_separator prompt_b0 prompt_f0
     local b1="$1" f1="$2"
 
@@ -390,7 +390,7 @@ function __newt_set_lseg_separator () {
 }
 
 # + Add a right segment {{{1
-function __newt_rsegment () {
+__newt_rsegment () {
     local seg_separator
     __newt_set_rseg_separator "$1" "$2"
 
@@ -401,7 +401,7 @@ function __newt_rsegment () {
 }
 
 # ++ Determine how to draw the separator for this segment {{{1
-function __newt_set_rseg_separator () {
+__newt_set_rseg_separator () {
     typeset -g seg_separator prompt_b0 prompt_f0
     local b1="$1" f1="$2"
 
@@ -430,7 +430,7 @@ function __newt_set_rseg_separator () {
 }
 
 # + Resolve color to prompt format escape {{{1
-function __newt_bg_color () {
+__newt_bg_color () {
     local c
     case $1 in
         none) c="%K{1}[none-bg]%k" ;;  # Shouldn't happen
@@ -439,7 +439,7 @@ function __newt_bg_color () {
             ;;
         fg:*)
             c=${1#*:}
-            [[ -z $c ]] && c=$(get_terminal_foreground)
+            [[ -z $c ]] && c=$(__newt_terminal_fg)
             c="%K{$c}"
             ;;
         *)
@@ -449,7 +449,7 @@ function __newt_bg_color () {
     print -rn $c
 }
 
-function __newt_fg_color () {
+__newt_fg_color () {
     local c
     case $1 in
         none) c="%F{1}[none-fg]%f" ;;  # Shouldn't happen
@@ -458,7 +458,7 @@ function __newt_fg_color () {
             ;;
         bg:*)
             c=${1#*:}
-            [[ -z $c ]] && c=$(get_terminal_background)
+            [[ -z $c ]] && c=$(__newt_terminal_bg)
             c="%F{$c}"
             ;;
         *)
@@ -475,7 +475,7 @@ function __newt_fg_color () {
 #     https://superuser.com/questions/157563/programmatic-access-to-current-xterm-background-color
 #     Maybe it can be implemented with the zsh/zpty module?
 
-function get_terminal_background () {
+__newt_terminal_bg () {
     local color
 
     zstyle -s :prompt-theme terminal-background color
@@ -484,7 +484,7 @@ function get_terminal_background () {
     print -n $color
 }
 
-function get_terminal_foreground () {
+__newt_terminal_fg () {
     local color
 
     zstyle -s :prompt-theme terminal-foreground color
@@ -494,7 +494,7 @@ function get_terminal_foreground () {
 }
 
 # + Finalize a segment's formatting escapes {{{1
-function __newt_finalize_segment () {
+__newt_finalize_segment () {
     setopt local_options extended_glob
     typeset -g prompt_b0 prompt_f0 seg_separator seg_content
 
@@ -508,7 +508,7 @@ function __newt_finalize_segment () {
     zstyle -t $__newt[ctx] compact \
         || [ -z $seg_content ] || seg_content=" $seg_content "
 
-    function make_truecolor_escape () {
+    __newt_truecolor_escape () {
         local n
         [[ $1 = F ]] && n=38 || n=48
         shift;
@@ -517,16 +517,16 @@ function __newt_finalize_segment () {
 
     # Change %F{RRR;GGG;BBB} to TrueColor escapes
     seg_separator="${seg_separator//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
-            make_truecolor_escape $match[@])}"
+            __newt_truecolor_escape $match[@])}"
     seg_content="${seg_content//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
-            make_truecolor_escape $match[@])}"
+            __newt_truecolor_escape $match[@])}"
 }
 
 # Styling: setting defaults, getting values {{{1
 
 # Print the defaults, using zstyle format so it is easy to copy and
 # modify to create a zstyle override.
-function prompt_newt_defaults () {
+prompt_newt_defaults () {
     local -a z
     local -i m1 m2
     local a b
@@ -549,7 +549,7 @@ function prompt_newt_defaults () {
     LANG=C print -o -lr $z
 }
 
-function __newt_default () {
+__newt_default () {
     local -A opts
     zparseopts -A opts -D - d
     (( $+opts[-d] )) \
@@ -557,7 +557,7 @@ function __newt_default () {
         || __newt_defaults+=(["${@[2,-1]}"]=$1)
 }
 
-function __newt_zstyle () {
+__newt_zstyle () {
     local -A opts
     zparseopts -A opts -D - d: x
     local style="$1"
@@ -594,7 +594,7 @@ function __newt_zstyle () {
 
 # Update prompt strings {{{1
 
-function __newt_update_prompt () {
+__newt_update_prompt () {
     local hook="$1"; shift
     local side="$1"; shift
 
@@ -603,7 +603,7 @@ function __newt_update_prompt () {
     __newt_assemble_segments $side "$@"
 }
 
-function __newt_do_segments () {
+__newt_do_segments () {
     local hook="$1"; shift
     local changed=0
     local func segment
@@ -617,7 +617,7 @@ function __newt_do_segments () {
     return 0
 }
 
-function __newt_assemble_segments () {
+__newt_assemble_segments () {
     local side="$1"; shift
 
     # These are state variables used in segment funcs
@@ -660,7 +660,7 @@ function __newt_assemble_segments () {
     fi
 }
 
-function __newt_precmd_save_status () {
+__newt_precmd_save_status () {
     # This should be first, to save status from user's command
     __newt[save_status]=$?
 }
@@ -668,19 +668,19 @@ function __newt_precmd_save_status () {
 
 # Hook function manipulations {{{1
 
-function __newt_list_zsh_hooks () {
+__newt_list_zsh_hooks () {
     print \
         chpwd precmd preexec periodic \
         zshaddhistory zshexit zsh_directory_name
 }
 
-function __newt_list_zle_hooks () {
+__newt_list_zle_hooks () {
     print \
         isearch-exit isearch-update line-pre-redraw \
         line-init line-finish history-line-set keymap-select
 }
 
-function __newt_add_hooks () {
+__newt_add_hooks () {
     local add_func="$1"; shift
     local tag="$1"; shift
 
@@ -707,7 +707,7 @@ function __newt_add_hooks () {
     done
 }
 
-function __newt_hook () {
+__newt_hook () {
     local hook="$1"
     __newt_update_prompt $hook left ${(Oa)=__newt[left]}
     __newt_update_prompt $hook right ${=__newt[right]}
@@ -717,7 +717,7 @@ function __newt_hook () {
     fi
 }
 
-function __newt_delete_hooks () {
+__newt_delete_hooks () {
     local delete_func="$1"; shift
 
     # Both use -D to delete based on a pattern
@@ -729,7 +729,7 @@ function __newt_delete_hooks () {
 
 
 # Cleanup {{{1
-function prompt_newt_cleanup () {
+prompt_newt_cleanup () {
     __newt_delete_hooks add-zsh-hook \
         ${=$(__newt_list_zsh_hooks)}
 
@@ -781,7 +781,7 @@ function prompt_newt_cleanup () {
 
 # Preview {{{1
 
-function prompt_newt_preview () {
+prompt_newt_preview () {
     local _zsh_theme_preview_euid
     local _zsh_theme_preview_hostname
     local count=0
@@ -793,14 +793,14 @@ function prompt_newt_preview () {
             'cyan green yellow black red white'
     fi
 
-    function __newt_preview_show () {
+    __newt_preview_show () {
         __newt_assemble_segments left ${(Oa)=__newt[left]}
         __newt_assemble_segments right ${=__newt[right]}
         [[ -o promptcr ]] && print -n $'\r'; :
         print -P "${PS1}$*%-1<<${(l:COLUMNS:: :)}${RPS1}"
     }
 
-    function __newt_preview_style () {
+    __newt_preview_style () {
         count=$((count+1))
         (( count > 1 )) && print ""
         print -n "newt theme"
@@ -855,7 +855,7 @@ function prompt_newt_preview () {
 
 # Help {{{1
 
-function prompt_newt_help () {
+prompt_newt_help () {
     local br='  '  # Markdown line break
     local styles='default, '${(j., .)${(ok)__newt_style//#%default}}
 
@@ -1085,9 +1085,9 @@ EOF
 
 # Main Prompt Setup {{{1
 
-function __newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
+__newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
 
-function prompt_newt_setup () {
+prompt_newt_setup () {
     autoload -Uz add-zsh-hook
     autoload -Uz add-zle-hook-widget
     autoload -Uz vcs_info
@@ -1104,7 +1104,7 @@ function prompt_newt_setup () {
     local -a colorbgfg
 
     # Inverse colors for defaults
-    colorbgfg=( $(get_terminal_foreground) $(get_terminal_background) )
+    colorbgfg=( $(__newt_terminal_fg) $(__newt_terminal_bg) )
 
     typeset -g -A __newt_style
     __newt_style[default]=$colorbgfg
@@ -1129,7 +1129,7 @@ function prompt_newt_setup () {
 
     __newt[ctx]=:prompt-theme:newt:$__newt[style]
 
-    function $0-set-colors () {
+    $0-set-colors () {
         # Primary segment
         __newt[color1]=${1-$colorbgfg[1]}
         __newt[color2]=${2-$colorbgfg[2]}
