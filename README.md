@@ -94,10 +94,32 @@ Segments
 The segments used for left and right prompts can be set with:
 
     zstyle ':prompt-theme:newt:*' left time context dir
-    zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
+    zstyle ':prompt-theme:newt:*' right vi_mode status exec_time jobs vcs
 
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
+
+### Execution time
+
+The `exec_time` segment states are `long` and `default`.
+
+The threshold from `default` to `long` can be set with
+`zstyle ':prompt-theme:newt:*:exec_time' threshold 30`.
+The default is 5 seconds. It can be fractional, for example `0.75`.
+
+The precision can be set with
+`zstyle ':prompt-theme:newt:*:exec_time' precision 3`.
+The default is 1 if the execution time is below 10 seconds,
+and 0 otherwise.
+
+By default, the `long` state shows times in a human-friendly format
+like `間1h22m33s`. The `default` state is empty (so times below the
+threshold are not shown). The format can be set with:
+
+    # %s: seconds
+    zstyle ':prompt-theme:newt:*:exec_time' long    '🕑%s'
+    # %t: human-friendly
+    zstyle ':prompt-theme:newt:*:exec_time' default '🕑%t'
 
 ### Exit status
 
@@ -106,6 +128,12 @@ only `error` status is shown. To always show a status, set:
 
     zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
     zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
+
+### Prompt time (dev)
+
+The `prompt_time` segment displays how long it takes for the prompt
+itself to be drawn. This segment is off by default. The precision can be
+set with `zstyle ':prompt-theme:newt:*:prompt_time' precision 3`.
 
 ### Version control
 

@@ -1,6 +1,8 @@
 emulate -L zsh
 
+zmodload zsh/datetime
 zmodload zsh/parameter
+zmodload zsh/mathfunc
 
 #function prompt_newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
 
@@ -36,6 +38,65 @@ function prompt_newt+dir+precmd () {
         || _prompt_newt[+dir+state]=
 }
 
+# + exec_time: Execution time of last command {{{1
+function prompt_newt+exec_time+setup () {
+    prompt_newt_default $'\u9593%t' long exec_time  # 間
+    prompt_newt_default 5 threshold exec_time
+}
+
+function prompt_newt+exec_time+preexec () {
+    _prompt_newt[+exec_time+start]=$EPOCHREALTIME
+}
+
+function prompt_newt+exec_time+precmd () {
+    local state
+
+    local stop=$EPOCHREALTIME
+    local start=${_prompt_newt[+exec_time+start]:-$stop}
+
+    local threshold="$(prompt_newt_zstyle threshold exec_time)"
+    local -F elapsed=$((stop - start))
+    if (( $elapsed >= $threshold )); then
+        state=long
+    else
+        state=default
+    fi
+
+    local precision="$(prompt_newt_zstyle precision exec_time)"
+    if [[ -z $precision ]]; then
+        (( elapsed < 10 )) && precision=1 || precision=0
+    fi
+
+    _prompt_newt[+exec_time+state]=$state
+    zformat -f '_prompt_newt[+exec_time+]' \
+        "$(prompt_newt_zstyle $state exec_time)" \
+        t:"$(_prompt_newt_human_time $elapsed $precision)" \
+        s:"$(printf '%.*f' $precision $elapsed)"
+
+    _prompt_newt[+exec_time+start]=
+}
+
+_prompt_newt_human_time () {
+    local s t=$1
+    local -i m h d precision=${2:-3}
+    ((
+        s = t % 60, t = floor(t) / 60,
+        m = t % 60, t = t / 60,
+        h = t % 24, t = t / 24,
+        d = t
+    ))
+
+    t=
+    ((d)) && t+=${d}d
+    ((h)) && t+=${h}h
+    ((m)) && t+=${m}m
+
+    printf -v s '%.*fs' $precision $s
+    t+=$s
+
+    print -rn $t
+}
+
 # + jobs: Background jobs {{{1
 function prompt_newt+jobs+precmd () {
     # \u2699 is ⚙
@@ -57,6 +118,34 @@ function prompt_newt+notice+precmd () {
     _prompt_newt[+notice+]=$_prompt_newt[+notice+notes]
     unset '_prompt_newt[+notice+notes]'
 }
+
+# + prompt_time: How long the prompt takes to draw {{{1
+
+# Install this precmd function specially so it gets called first
+function _prompt_newt_prompt_time_precmd {
+    _prompt_newt[+prompt_time+start]=$EPOCHREALTIME
+}
+
+function prompt_newt+prompt_time+setup () {
+    precmd_functions[1,0]=(_prompt_newt_prompt_time_precmd)
+    local i=2
+    while (( i <= $#precmd_functions )); do
+        if [[ $precmd_functions[$i] = _prompt_newt_prompt_time_precmd ]]; then
+            # Remove it
+            precmd_functions[$i]=()
+        else
+            i=$((i+1))
+        fi
+    done
+}
+
+function prompt_newt+prompt_time+zle-line-init () {
+    local now=$EPOCHREALTIME
+    local elapsed=$((now - _prompt_newt[+prompt_time+start]))
+    printf -v '_prompt_newt[+prompt_time+]' '%.*f' \
+        $(prompt_newt_zstyle -d 6 precision prompt_time) $elapsed
+}
+
 
 # + status: Exit status of last command {{{1
 function prompt_newt+status+setup () {
@@ -639,6 +728,7 @@ function prompt_newt_delete_hooks () {
     # Both use -D to delete based on a pattern
     for hook in "$@"; do
         ${delete_func} -D $hook 'prompt_newt_*'
+        ${delete_func} -D $hook '_prompt_newt_*'
     done
 }
 
@@ -892,10 +982,32 @@ Segments
 The segments used for left and right prompts can be set with:
 
     zstyle ':prompt-theme:newt:*' left time context dir
-    zstyle ':prompt-theme:newt:*' right vi_mode status jobs vcs
+    zstyle ':prompt-theme:newt:*' right vi_mode status exec_time jobs vcs
 
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
+
+### Execution time
+
+The `exec_time` segment states are `long` and `default`.
+
+The threshold from `default` to `long` can be set with
+`zstyle ':prompt-theme:newt:*:exec_time' threshold 30`.
+The default is 5 seconds. It can be fractional, for example `0.75`.
+
+The precision can be set with
+`zstyle ':prompt-theme:newt:*:exec_time' precision 3`.
+The default is 1 if the execution time is below 10 seconds,
+and 0 otherwise.
+
+By default, the `long` state shows times in a human-friendly format
+like `間1h22m33s`. The `default` state is empty (so times below the
+threshold are not shown). The format can be set with:
+
+    # %s: seconds
+    zstyle ':prompt-theme:newt:*:exec_time' long    '🕑%s'
+    # %t: human-friendly
+    zstyle ':prompt-theme:newt:*:exec_time' default '🕑%t'
 
 ### Exit status
 
@@ -904,6 +1016,12 @@ only `error` status is shown. To always show a status, set:
 
     zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
     zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
+
+### Prompt time (dev)
+
+The `prompt_time` segment displays how long it takes for the prompt
+itself to be drawn. This segment is off by default. The precision can be
+set with `zstyle ':prompt-theme:newt:*:prompt_time' precision 3`.
 
 ### Version control
 
@@ -1037,7 +1155,7 @@ function prompt_newt_setup () {
     unfunction $0-set-colors
 
     _prompt_newt[left]=$(prompt_newt_zstyle -d 'time context notice dir' left)
-    _prompt_newt[right]=$(prompt_newt_zstyle -d 'vi_mode status jobs vcs' right)
+    _prompt_newt[right]=$(prompt_newt_zstyle -d 'vi_mode status exec_time jobs vcs' right)
 
     prompt_newt_default "$_prompt_newt[color-yellow]"  bg vi_mode \*
     prompt_newt_default "$_prompt_newt[color1]"        bg \*      \*
