@@ -95,6 +95,11 @@ __newt_human_time () {
     print -rn $t
 }
 
+# + history: Current history {{{1
+__newt+history+precmd () {
+    __newt[+history+]=$(__newt_zstyle -d '%!' default history)
+}
+
 # + jobs: Background jobs {{{1
 __newt+jobs+precmd () {
     # \u2699 is ⚙
@@ -1155,7 +1160,7 @@ prompt_newt_setup () {
 
     unfunction $0-set-colors
 
-    __newt[left]=$(__newt_zstyle -d 'time context notice dir' left)
+    __newt[left]=$(__newt_zstyle -d 'history time context notice dir' left)
     __newt[right]=$(__newt_zstyle -d 'vi_mode status exec_time jobs vcs' right)
 
     __newt_default "$__newt[color-yellow]"  bg vi_mode \*
