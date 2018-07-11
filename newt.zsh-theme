@@ -503,9 +503,14 @@ __newt_finalize_segment () {
     setopt local_options extended_glob
     typeset -g prompt_b0 prompt_f0 seg_separator seg_content
 
-    zformat -f seg_content "$seg_content" \
-        k:$(__newt_bg_color $prompt_b0) \
-        f:$(__newt_fg_color $prompt_f0)
+    # Replace %k and %f with segment bg and fg colors
+    # NB: This doesn't use zformat because that will gobble up other formats
+    # in the content, like %(X,...), which the user specified. This simple
+    # substitution will do the wrong thing with something like '%%killed',
+    # but that should be rare and *could* be worked around.
+    local k="$(__newt_bg_color $prompt_b0)"
+    local f="$(__newt_fg_color $prompt_f0)"
+    seg_content=${${seg_content:gs/%k/${k}}:gs/%f/${f}/}
 
     # Trim whitespace
     seg_content=${${seg_content##[[:space:]]##}%%[[:space:]]##}
