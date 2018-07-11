@@ -101,10 +101,14 @@ __newt+history+precmd () {
 }
 
 # + jobs: Background jobs {{{1
+__newt+jobs+setup () {
+    __newt_default $'\u2699'' %1(j:%2(j,%j,):-)' jobs default
+}
+
 __newt+jobs+precmd () {
     # \u2699 is ⚙
     (( ${(%):-%j} )) \
-        && __newt[+jobs+]=$(__newt_zstyle -d $'\u2699 %j' jobs default) \
+        && __newt[+jobs+]=$(__newt_zstyle jobs default) \
         || __newt[+jobs+]=$(__newt_zstyle jobs zero)
 }
 
