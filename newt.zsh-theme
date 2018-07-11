@@ -189,7 +189,7 @@ __newt+status+precmd () {
 
 # + time: Current time {{{1
 __newt+time+precmd () {
-    __newt[+time+]='%T'
+    __newt[+time+]=$(__newt_zstyle -d %T default time)
 }
 
 # + vcs: Version control {{{1
@@ -1065,6 +1065,12 @@ only `error` status is shown. To always show a status, set:
 The `prompt_time` segment displays how long it takes for the prompt
 itself to be drawn. This segment is off by default. The precision can be
 set with `zstyle ':prompt-theme:newt:*:prompt_time' precision 3`.
+
+### Time
+
+The `time` segment shows the current time. The format can be set with
+
+    zstyle ':prompt-theme:newt:*:time' default '%*'  # HH:MM:SS
 
 ### Version control
 
