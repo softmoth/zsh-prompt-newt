@@ -1,5 +1,4 @@
 emulate -L zsh
-
 zmodload zsh/datetime
 zmodload zsh/parameter
 zmodload zsh/mathfunc
@@ -579,29 +578,28 @@ __newt_zstyle () {
     local -A opts
     zparseopts -A opts -D - d: x
     local style="$1"
-    local ctx=('' ${@[2,-1]})
+    local ctx=($__newt[ctx] ${@[2,-1]})
 
-    typeset -g -A __newt_defaults
     local val; unset val
     # See if a setting is defined
-    zstyle -t ${__newt[ctx]}${(j.:.)ctx} "$style"
+    zstyle -t ${(j.:.)ctx} "$style"
     if [[ $? -ne 2 ]]; then
-        zstyle -s ${__newt[ctx]}${(j.:.)ctx} "$style" val
+        zstyle -s ${(j.:.)ctx} "$style" val
     else
         # If -x option, then do a simplified wildcard search through
         # the defaults. Say context is a b c, then this will check for
         # "a b c", "a b *", "a * *", "* * *", and use the first match.
         # If not -x option, then only look for a full "a b c" match.
-        ctx[1,1]=()
+        ctx[1]=($style)
         local i
         (( $+opts[-x] )) && i=$#ctx || i=0
         while true; do
-            if (( ${+__newt_defaults[$style $ctx]} )); then
-                val=${__newt_defaults[$style $ctx]}
+            if (( ${+__newt_defaults[$ctx]} )); then
+                val=${__newt_defaults[$ctx]}
                 break
             fi
 
-            (( i < 1 )) && break
+            (( i <= 1 )) && break
             ctx[$i]='*'
             i=$((i - 1))
         done
@@ -1213,8 +1211,11 @@ prompt_newt_setup () {
 
     unfunction $0-set-colors
 
-    __newt[left]=$(__newt_zstyle -d 'history time context notice dir' left)
-    __newt[right]=$(__newt_zstyle -d 'vi_mode status exec_time jobs vcs' right)
+    __newt_default 'history time context notice dir' left
+    __newt_default 'vi_mode status exec_time jobs vcs' right
+
+    __newt[left]=$(__newt_zstyle  left)
+    __newt[right]=$(__newt_zstyle right)
 
     __newt_default "$__newt[color-yellow]"  bg vi_mode \*
     __newt_default "$__newt[color1]"        bg \*      \*
@@ -1259,4 +1260,4 @@ prompt_newt_setup () {
 
 [[ -o kshautoload ]] || prompt_newt_setup "$@"
 
-# vim:set sw=4 et ft=zsh fdm=marker:
+# vim:set sw=4 et ft=zsh fdm=marker fmr={{{,}}}}}:
