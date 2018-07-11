@@ -1,4 +1,3 @@
-emulate -L zsh
 zmodload zsh/datetime
 zmodload zsh/parameter
 zmodload zsh/mathfunc
@@ -792,7 +791,7 @@ prompt_newt_cleanup () {
     unset __newt_style
     unset PROMPT_NEWT_STYLE
 
-    autoload prompt_newt_setup
+    autoload -Uz prompt_newt_setup
 }
 
 # Preview {{{1
@@ -1136,6 +1135,8 @@ prompt_newt_setup () {
     autoload -Uz add-zsh-hook
     autoload -Uz add-zle-hook-widget
     autoload -Uz vcs_info
+
+    setopt local_options noaliases
 
     typeset -g -A -H __newt=()
     typeset -g -A -H __newt_defaults=()
