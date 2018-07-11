@@ -442,8 +442,10 @@ __newt_set_rseg_separator () {
 __newt_bg_color () {
     local c
     case $1 in
-        none) c="%K{1}[none-bg]%k" ;;  # Shouldn't happen
-        '')
+        none)
+            c=
+            ;;
+        '' | _ )
             c="%k"
             ;;
         fg:*)
@@ -461,8 +463,10 @@ __newt_bg_color () {
 __newt_fg_color () {
     local c
     case $1 in
-        none) c="%F{1}[none-fg]%f" ;;  # Shouldn't happen
-        '')
+        none)
+            c=
+            ;;
+        '' | _ )
             c="%f"
             ;;
         bg:*)
@@ -803,8 +807,8 @@ prompt_newt_preview () {
     if (( $#* )); then
         set -- "$*"
     else
-        set -- default ${(ok)__newt_style//#%default} \
-            'cyan green yellow black red white'
+        set -- default ${(ok)__newt_style:#default} \
+            'example black 5 white 4 red 3'
     fi
 
     __newt_preview_show () {
@@ -899,26 +903,19 @@ EOF
 [demo]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 EOF
 
-        cat <<EOF
+        cat <<'EOF'
 
 Styles
 ------
 
 Newt comes with these pre-defined styles:
-*${styles}*.
 EOF
+
+printf '*%s*.\n' "${styles}"
 
         cat <<'EOF'
 
 Use a style with `prompt newt meadow`.
-
-Create a `bespoke` style with `prompt newt blue white magenta`, giving
-a list of colors. Each color can be
-
-- `''`, meaning the terminal's default background / foreground, or
-- *black, red, yellow, green, blue, magenta, cyan, white*, or
-- a color number supported by your terminal, or
-- a truecolor specification as described in **Truecolor support** below.
 EOF
 
         (( $+PROMPT_NEWT_README )) && cat <<'EOF'
@@ -934,7 +931,20 @@ These styles are simply shorthand for the `zstyle` configuration, as
 described in **Styling** below. So the style can be used to get most
 things as you like, and then individual elements can be refined further.
 
-Colors indexes are
+### Custom styles
+
+Create a `bespoke` style with `prompt newt bespoke blue white magenta`,
+giving a style name and a list of colors. Each color can be
+
+- `black`, `red`, `yellow`, `green`, `blue`, `magenta`, `cyan`, `white`, or
+- a color number supported by your terminal, or
+- a truecolor specification as described in **Truecolor support** below, or
+- `''` or `_`, meaning the terminal's default background / foreground, or
+- `none`, meaning do not set the color, use whatever is already active
+
+### Colors indexes
+
+The list of colors is
 
 1.  Primary background
 2.  Primary foreground
@@ -957,16 +967,39 @@ background:
 
     prompt newt forest 161 227
 
+### Re-running `prompt newt`
+
+When `prompt newt` is run with no arguments, or if the first argument
+is `--`, it uses the value of `$PROMPT_NEWT_STYLE` in the environment.
+And it always sets `PROMPT_NEWT_STYLE` to the current settings.
+
+This means that, for example, `sudo -Es` will inherit the current style.
+It is possible to add more colors to the current style by following the
+`--` with colors. For example
+
+    prompt newt example blue white
+    prompt newt -- green black
+    prompt newt -- red yellow
+
+That is equivalent to
+`prompt newt example blue white green black red yellow`.
+
 Styling
 -------
 
 Segments can be configured with the context
-`:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
-anything you like, and you can call `prompt newt STYLE` to
-use a particular style. If just `prompt newt` is run, the
-style is `default`. *Segment* is the name of the segment, e.g.,
-`vcs` or `dir`. *State* is segment-specific, and is `default`
-for most segments most of the time.
+`:prompt-theme:newt:STYLE:SEGMENT:STATE`.
+
+*Style* can be any word you like, except for a color name (`red`, `_`,
+etc.). You can call `prompt newt STYLE` to use a particular style.
+
+If just `prompt newt` is run, the style is inherited from the
+`$PROMPT_NEWT_STYLE` environment variable, or `default`.
+
+*Segment* is the name of the segment, e.g., `vcs` or `dir`.
+
+*State* is segment-specific, and is `default` for most segments
+most of the time.
 
 Run `prompt_newt_defaults` to show the built-in settings.
 Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
@@ -1115,10 +1148,8 @@ prompt_newt_setup () {
 
     # + Styling {{{1
 
-    local -a colorbgfg
-
     # Inverse colors for defaults
-    colorbgfg=( $(__newt_terminal_fg) $(__newt_terminal_bg) )
+    local -a colorbgfg=( $(__newt_terminal_fg) $(__newt_terminal_bg) )
 
     typeset -g -A __newt_style
     __newt_style[default]=$colorbgfg
@@ -1127,18 +1158,32 @@ prompt_newt_setup () {
     __newt_style[meadow]='149 235 81 235'
     __newt_style[mono]='235 242 238 250 235 197'
 
-    # Env variable can be used in .zshrc, etc.
-    export PROMPT_NEWT_STYLE=${(j. .)${(qq)@}}
+    local -a style
 
-    if [[ -n $1 && $+__newt_style[$1] > 0 ]]; then
-        __newt[style]=$1
-        shift
-    else
-        if [[ $#@ > 1 ]]; then
-            __newt[style]=bespoke
-        else
-            __newt[style]=default
-        fi
+    if [[ $#@ == 0 || $1 = '--' ]]; then
+        style[1]=( "${${(z)${PROMPT_NEWT_STYLE:-${1-default}}}[@]}" )
+        (( $#@ )) && shift
+    fi
+    style+=("${(qq)@}")
+
+    (( $#style )) && case ${(Q)style[1]} in
+        '' | _ | none | fg:* | bg:* | [0-9]* \
+        | black | red | green | yellow | blue | magenta | cyan | white )
+            print "$0: ERROR: Color found where style name expected." \
+                "Did you intend: \`$0 ${USER:-'pretty'} ${(q)@}\`?"
+            style[1,0]='--'
+            ;;
+    esac
+
+    style[1]=${(Q)style[1]}
+
+    # Env variable can be used in .zshrc, etc.
+    export PROMPT_NEWT_STYLE="${style[*]}"
+    __newt[style]=$style[1]
+
+    if (( $+__newt_style[$style[1]] )); then
+        # Splice in the predefined colors for this style
+        style[2,0]=("${${(z)${__newt_style[$style[1]]}}[@]}")
     fi
 
     __newt[ctx]=:prompt-theme:newt:$__newt[style]
@@ -1164,8 +1209,7 @@ prompt_newt_setup () {
         __newt[color-white]=${14-white}
     }
 
-    local -a style=( ${(z)__newt_style[${__newt[style]}]} )
-    $0-set-colors "${(Q)style[@]}" "$@"
+    $0-set-colors "${(Q)style[2,-1][@]}"
 
     unfunction $0-set-colors
 

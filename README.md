@@ -17,14 +17,6 @@ Newt comes with these pre-defined styles:
 
 Use a style with `prompt newt meadow`.
 
-Create a `bespoke` style with `prompt newt blue white magenta`, giving
-a list of colors. Each color can be
-
-- `''`, meaning the terminal's default background / foreground, or
-- *black, red, yellow, green, blue, magenta, cyan, white*, or
-- a color number supported by your terminal, or
-- a truecolor specification as described in **Truecolor support** below.
-
 ![Newt Theme Preview][preview]
 
 [preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
@@ -33,7 +25,20 @@ These styles are simply shorthand for the `zstyle` configuration, as
 described in **Styling** below. So the style can be used to get most
 things as you like, and then individual elements can be refined further.
 
-Colors indexes are
+### Custom styles
+
+Create a `bespoke` style with `prompt newt bespoke blue white magenta`,
+giving a style name and a list of colors. Each color can be
+
+- `black`, `red`, `yellow`, `green`, `blue`, `magenta`, `cyan`, `white`, or
+- a color number supported by your terminal, or
+- a truecolor specification as described in **Truecolor support** below, or
+- `''` or `_`, meaning the terminal's default background / foreground, or
+- `none`, meaning do not set the color, use whatever is already active
+
+### Colors indexes
+
+The list of colors is
 
 1.  Primary background
 2.  Primary foreground
@@ -56,16 +61,39 @@ background:
 
     prompt newt forest 161 227
 
+### Re-running `prompt newt`
+
+When `prompt newt` is run with no arguments, or if the first argument
+is `--`, it uses the value of `$PROMPT_NEWT_STYLE` in the environment.
+And it always sets `PROMPT_NEWT_STYLE` to the current settings.
+
+This means that, for example, `sudo -Es` will inherit the current style.
+It is possible to add more colors to the current style by following the
+`--` with colors. For example
+
+    prompt newt example blue white
+    prompt newt -- green black
+    prompt newt -- red yellow
+
+That is equivalent to
+`prompt newt example blue white green black red yellow`.
+
 Styling
 -------
 
 Segments can be configured with the context
-`:prompt-theme:newt:STYLE:SEGMENT:STATE`. *Style* can be
-anything you like, and you can call `prompt newt STYLE` to
-use a particular style. If just `prompt newt` is run, the
-style is `default`. *Segment* is the name of the segment, e.g.,
-`vcs` or `dir`. *State* is segment-specific, and is `default`
-for most segments most of the time.
+`:prompt-theme:newt:STYLE:SEGMENT:STATE`.
+
+*Style* can be any word you like, except for a color name (`red`, `_`,
+etc.). You can call `prompt newt STYLE` to use a particular style.
+
+If just `prompt newt` is run, the style is inherited from the
+`$PROMPT_NEWT_STYLE` environment variable, or `default`.
+
+*Segment* is the name of the segment, e.g., `vcs` or `dir`.
+
+*State* is segment-specific, and is `default` for most segments
+most of the time.
 
 Run `prompt_newt_defaults` to show the built-in settings.
 Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
