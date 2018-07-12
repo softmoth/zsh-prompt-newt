@@ -255,8 +255,8 @@ __newt+vi_mode+setup () {
         && vary=fg const=bg const_color='' \
         || vary=bg const=fg const_color='bg:'
 
-    __newt_default "$const_color"                 $const vi_mode \*
-    __newt_default "$__newt[color-yellow]"  $vary  vi_mode \*
+    __newt_default "$const_color"           $const vi_mode \*
+    __newt_default "$__newt[color-yellow]"  $vary  vi_mode viins
     __newt_default "$__newt[color-green]"   $vary  vi_mode vicmd
     __newt_default "$__newt[color-cyan]"    $vary  vi_mode replace
     __newt_default "$__newt[color-magenta]" $vary  vi_mode isearch
