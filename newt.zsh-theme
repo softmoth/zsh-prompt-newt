@@ -36,8 +36,8 @@ __newt+dir+precmd () {
 
 # + exec_time: Execution time of last command {{{1
 __newt+exec_time+setup () {
-    __newt_default $'\u9593%t' long exec_time  # 間
-    __newt_default 5 threshold exec_time
+    __newt_default exec_time long $'\u9593%t'  # 間
+    __newt_default exec_time threshold 5
 }
 
 __newt+exec_time+preexec () {
@@ -50,7 +50,7 @@ __newt+exec_time+precmd () {
     local stop=$EPOCHREALTIME
     local start=${__newt[+exec_time+start]:-$stop}
 
-    local threshold="$(__newt_zstyle threshold exec_time)"
+    local threshold="$(__newt_zstyle exec_time threshold)"
     local -F elapsed=$((stop - start))
     if (( $elapsed >= $threshold )); then
         state=long
@@ -58,14 +58,14 @@ __newt+exec_time+precmd () {
         state=default
     fi
 
-    local precision="$(__newt_zstyle precision exec_time)"
+    local precision="$(__newt_zstyle exec_time precision)"
     if [[ -z $precision ]]; then
         (( elapsed < 10 )) && precision=1 || precision=0
     fi
 
     __newt[+exec_time+state]=$state
     zformat -f '__newt[+exec_time+]' \
-        "$(__newt_zstyle $state exec_time)" \
+        "$(__newt_zstyle exec_time $state)" \
         t:"$(__newt_human_time $elapsed $precision)" \
         s:"$(printf '%.*f' $precision $elapsed)"
 
@@ -95,12 +95,12 @@ __newt_human_time () {
 
 # + history: Current history {{{1
 __newt+history+precmd () {
-    __newt[+history+]=$(__newt_zstyle -d '%!' default history)
+    __newt[+history+]=$(__newt_zstyle -d '%!' history default)
 }
 
 # + jobs: Background jobs {{{1
 __newt+jobs+setup () {
-    __newt_default $'\u2699'' %1(j:%2(j,%j,):-)' jobs default
+    __newt_default jobs default $'\u2699'' %1(j:%2(j,%j,):-)'
 }
 
 __newt+jobs+precmd () {
@@ -148,20 +148,20 @@ __newt+prompt_time+zle-line-init () {
     local now=$EPOCHREALTIME
     local elapsed=$((now - __newt[+prompt_time+start]))
     printf -v '__newt[+prompt_time+]' '%.*f' \
-        $(__newt_zstyle -d 6 precision prompt_time) $elapsed
+        $(__newt_zstyle -d 6 prompt_time precision) $elapsed
 }
 
 
 # + status: Exit status of last command {{{1
 __newt+status+setup () {
     __newt[save_status]=0
-    __newt_default $'\u2718 %?' status error      # ✘
-    __newt_default "$__newt[color5]"        bg status  error
-    __newt_default "$__newt[color6]"        fg status  error
-    #__newt_default $'\u2713'    status ok         # ✓
-    __newt_default "$__newt[color-green]"   fg status  ok
-    #__newt_default $'\u25c6'    status suspended  # ◆
-    __newt_default "$__newt[color-yellow]"  fg status  suspended
+    __newt_default status error        $'\u2718 %?'  # ✘
+    __newt_default status error     bg "$__newt[color5]"
+    __newt_default status error     fg "$__newt[color6]"
+    #__newt_default status ok           $'\u2713'  # ✓
+    __newt_default status ok        fg "$__newt[color-green]"
+    #__newt_default status suspended    $'\u25c6'  # ◆
+    __newt_default status suspended fg "$__newt[color-yellow]"
 }
 
 __newt+status+preexec () {
@@ -189,7 +189,7 @@ __newt+status+precmd () {
 
 # + time: Current time {{{1
 __newt+time+precmd () {
-    __newt[+time+]=$(__newt_zstyle -d %T default time)
+    __newt[+time+]=$(__newt_zstyle -d %T time default)
 }
 
 # + vcs: Version control {{{1
@@ -243,25 +243,25 @@ __newt+vcs+precmd () {
 
 # + vi_mode: Line editing mode {{{1
 __newt+vi_mode+setup () {
-    __newt_default ''      viins   vi_mode
-    __newt_default NORMAL  vicmd   vi_mode
-    __newt_default REPLACE replace vi_mode
-    __newt_default SEARCH  isearch vi_mode
-    __newt_default VISUAL  visual  vi_mode
-    __newt_default V-LINE  vline   vi_mode
+    __newt_default vi_mode viins   ''
+    __newt_default vi_mode vicmd   NORMAL
+    __newt_default vi_mode replace REPLACE
+    __newt_default vi_mode isearch SEARCH
+    __newt_default vi_mode visual  VISUAL
+    __newt_default vi_mode vline   V-LINE
 
     local vary const const_color
     [[ $__newt[color1] = '' ]] \
         && vary=fg const=bg const_color='' \
         || vary=bg const=fg const_color='bg:'
 
-    __newt_default "$const_color"           $const vi_mode \*
-    __newt_default "$__newt[color-yellow]"  $vary  vi_mode viins
-    __newt_default "$__newt[color-green]"   $vary  vi_mode vicmd
-    __newt_default "$__newt[color-cyan]"    $vary  vi_mode replace
-    __newt_default "$__newt[color-magenta]" $vary  vi_mode isearch
-    __newt_default "$__newt[color-blue]"    $vary  vi_mode visual
-    __newt_default "$__newt[color-blue]"    $vary  vi_mode vline
+    __newt_default vi_mode \*      $const "$const_color"
+    __newt_default vi_mode viins   $vary  "$__newt[color-yellow]"
+    __newt_default vi_mode vicmd   $vary  "$__newt[color-green]"
+    __newt_default vi_mode replace $vary  "$__newt[color-cyan]"
+    __newt_default vi_mode isearch $vary  "$__newt[color-magenta]"
+    __newt_default vi_mode visual  $vary  "$__newt[color-blue]"
+    __newt_default vi_mode vline   $vary  "$__newt[color-blue]"
 }
 
 __newt+vi_mode+zle-keymap-select   () { __newt+vi_mode+hook "$@" }
@@ -279,7 +279,7 @@ __newt+vi_mode+hook () {
     [[ $mode = $__newt[+vi_mode+state] ]] && return 1
     #__newt_debug "       + ${__newt[+vi_mode+state]} -> $mode"
     __newt[+vi_mode+state]=$mode
-    __newt[+vi_mode+]=$(__newt_zstyle $mode vi_mode)
+    __newt[+vi_mode+]=$(__newt_zstyle vi_mode $mode)
 }
 
 # VCS_Info hooks for git {{{1
@@ -547,8 +547,8 @@ prompt_newt_defaults () {
     local -i m1 m2
     local a b
     for k v in "${(kv)__newt_defaults[@]}"; do
-        a=${${=k}[2,-1]}
-        b=${${=k}[1]}
+        a=${${=k}[1,-2]}
+        b=${${=k}[-1]}
         (( m1 < $#a )) && m1=$#a
         (( m2 < $#b )) && m2=$#b
     done
@@ -557,8 +557,8 @@ prompt_newt_defaults () {
     for k v in "${(kv)__newt_defaults[@]}"; do
         z[$#z+1]=$(printf \
                 'zstyle   %-*s %-*s %s' \
-                $(($#ctx + m1 + 4)) ${(qq):-$ctx${(j.:.)${=k}[2,-1]}} \
-                $((m2 + 2)) "${(q)${=k}[1]}" \
+                $(($#ctx + m1 + 4)) ${(qq):-$ctx${(j.:.)${=k}[1,-2]}} \
+                $((m2 + 2)) "${(q)${=k}[-1]}" \
                 ${(q)v})
     done
 
@@ -570,14 +570,14 @@ __newt_default () {
     zparseopts -A opts -D - d
     (( $+opts[-d] )) \
         && unset "__newt_defaults[$*]" \
-        || __newt_defaults+=(["${@[2,-1]}"]=$1)
+        || __newt_defaults+=(["${*[1,-2]}"]="${*[-1]}")
 }
 
 __newt_zstyle () {
     local -A opts
     zparseopts -A opts -D - d: x
-    local style="$1"
-    local ctx=($__newt[ctx] ${@[2,-1]})
+    local style="${@[-1]}"
+    local ctx=($__newt[ctx] "${@[1,-2]}")
 
     local val; unset val
     # See if a setting is defined
@@ -589,16 +589,16 @@ __newt_zstyle () {
         # the defaults. Say context is a b c, then this will check for
         # "a b c", "a b *", "a * *", "* * *", and use the first match.
         # If not -x option, then only look for a full "a b c" match.
-        ctx[1]=($style)
+        ctx=( $ctx[2,-1] $style )
         local i
-        (( $+opts[-x] )) && i=$#ctx || i=0
+        (( $+opts[-x] )) && i=$(($#ctx - 1)) || i=0
         while true; do
             if (( ${+__newt_defaults[$ctx]} )); then
                 val=${__newt_defaults[$ctx]}
                 break
             fi
 
-            (( i <= 1 )) && break
+            (( i < 1 )) && break
             ctx[$i]='*'
             i=$((i - 1))
         done
@@ -653,8 +653,8 @@ __newt_assemble_segments () {
         state=${__newt[+${segment}+state]:-default}
 
         $func \
-            "$(__newt_zstyle -x bg "$segment" "$state")" \
-            "$(__newt_zstyle -x fg "$segment" "$state")" \
+            "$(__newt_zstyle -x "$segment" "$state" bg)" \
+            "$(__newt_zstyle -x "$segment" "$state" fg)" \
             $str
     done
 
@@ -1218,33 +1218,31 @@ prompt_newt_setup () {
 
     unfunction $0-set-colors
 
-    __newt_default 'history time context notice dir' left
-    __newt_default 'vi_mode status exec_time jobs vcs' right
+    __newt_default left  'history time context notice dir'
+    __newt_default right 'vi_mode status exec_time jobs vcs'
 
     __newt[left]=$(__newt_zstyle  left)
     __newt[right]=$(__newt_zstyle right)
 
-    __newt_default "$__newt[color-yellow]"  bg vi_mode \*
-    __newt_default "$__newt[color1]"        bg \*      \*
-    __newt_default "$__newt[color2]"        fg \*      \*
-    __newt_default "$__newt[color3]"        bg dir     \*
-    __newt_default "$__newt[color4]"        fg dir     \*
-    __newt_default "$__newt[color5]"        bg dir     root
-    __newt_default "$__newt[color6]"        fg dir     root
+    __newt_default vi_mode \*        bg "$__newt[color-yellow]"
+    __newt_default \*      \*        bg "$__newt[color1]"
+    __newt_default \*      \*        fg "$__newt[color2]"
+    __newt_default dir     \*        bg "$__newt[color3]"
+    __newt_default dir     \*        fg "$__newt[color4]"
+    __newt_default dir     root      bg "$__newt[color5]"
+    __newt_default dir     root      fg "$__newt[color6]"
 
-    #__newt_default "$__newt[color3]"        bg jobs    \*
-    #__newt_default "$__newt[color4]"        fg jobs    \*
-    __newt_default "$__newt[color3]"        bg vcs     \*
-    __newt_default "$__newt[color4]"        fg vcs     \*
-    __newt_default "$__newt[color5]"        bg vcs     clobbered
-    __newt_default "$__newt[color6]"        fg vcs     clobbered
-    __newt_default "$__newt[color5]"        bg vcs     root
-    __newt_default "$__newt[color6]"        fg vcs     root
+    __newt_default vcs     \*        bg "$__newt[color3]"
+    __newt_default vcs     \*        fg "$__newt[color4]"
+    __newt_default vcs     clobbered bg "$__newt[color5]"
+    __newt_default vcs     clobbered fg "$__newt[color6]"
+    __newt_default vcs     root      bg "$__newt[color5]"
+    __newt_default vcs     root      fg "$__newt[color6]"
 
-    #__newt_default "$__newt[color-cyan]"    bg vcs     action
-    #__newt_default "$__newt[color-black]"   fg vcs     action
-    #__newt_default "$__newt[color-magenta]" bg vcs     dirty
-    #__newt_default "$__newt[color-black]"   fg vcs     dirty
+    #__newt_default vcs     action    bg "$__newt[color-cyan]"
+    #__newt_default vcs     action    fg "$__newt[color-black]"
+    #__newt_default vcs     dirty     bg "$__newt[color-magenta]"
+    #__newt_default vcs     dirty     fg "$__newt[color-black]"
 
     __newt_do_segments setup ${=__newt[left]}
     __newt_do_segments setup ${=__newt[right]}
