@@ -153,6 +153,13 @@ __newt+prompt_time+zle-line-init () {
 
 
 # + status: Exit status of last command {{{1
+
+# NB Special case precmd func
+__newt_precmd_save_status () {
+    # This should be first, to save status from user's command
+    __newt[save_status]=$?
+}
+
 __newt+status+setup () {
     __newt[save_status]=0
     __newt_default status error        $'\u2718 %?'  # ✘
@@ -353,191 +360,6 @@ __newt+vi_mode+hook () {
     (( $#gitstatus )) && hook_com[misc]+="${(j:/:)gitstatus}"
 }
 
-
-# Drawing Powerline segments {{{1
-
-# + Add a left segment {{{1
-__newt_lsegment () {
-    local seg_separator
-    __newt_set_lseg_separator "$1" "$2"
-
-    local seg_content="$3"
-    __newt_finalize_segment
-
-    prompt_result=$seg_content$seg_separator$prompt_result
-}
-
-# ++ Determine how to draw the left segment separator {{{1
-__newt_set_lseg_separator () {
-    typeset -g seg_separator prompt_b0 prompt_f0
-    local b1="$1" f1="$2"
-
-    local lthick_separator=$'\ue0b0'  # 
-    local lthin_separator=$'\ue0b1'   # 
-
-    [[ $b1 = none ]] && b1=$prompt_b0
-    [[ $f1 = none ]] && f1=$prompt_f0
-
-    seg_separator=
-    if [[ $b1 = $prompt_b0 ]]; then
-        seg_separator+=$lthin_separator
-        [[ $f1 != $prompt_f0 ]] \
-            && seg_separator+=$(__newt_fg_color $prompt_f0)
-    else
-        local sepfg="$(__newt_fg_color bg:$b1)"
-        seg_separator+=$sepfg
-        seg_separator+=$(__newt_bg_color $prompt_b0)
-        seg_separator+=$lthick_separator
-        local nextfg="$(__newt_fg_color $prompt_f0)"
-        [[ $nextfg != $sepfg ]] && seg_separator+=$nextfg
-    fi
-
-    prompt_b0=$b1
-    prompt_f0=$f1
-}
-
-# + Add a right segment {{{1
-__newt_rsegment () {
-    local seg_separator
-    __newt_set_rseg_separator "$1" "$2"
-
-    local seg_content="$3"
-    __newt_finalize_segment
-
-    prompt_result+=$seg_separator$seg_content
-}
-
-# ++ Determine how to draw the separator for this segment {{{1
-__newt_set_rseg_separator () {
-    typeset -g seg_separator prompt_b0 prompt_f0
-    local b1="$1" f1="$2"
-
-    local rthick_separator=$'\ue0b2' # 
-    local rthin_separator=$'\ue0b3'  # 
-
-    [[ $b1 = none ]] && b1=$prompt_b0
-    [[ $f1 = none ]] && f1=$prompt_f0
-
-    seg_separator=
-    if [[ $b1 = $prompt_b0 ]]; then
-        [[ $f1 != $prompt_f0 ]] \
-            && seg_separator+=$(__newt_fg_color $f1)
-        seg_separator+=$rthin_separator
-    else
-        local sepfg=$(__newt_fg_color bg:$b1)
-        seg_separator+=$sepfg
-        seg_separator+=$rthick_separator
-        seg_separator+=$(__newt_bg_color $b1)
-        local nextfg=$(__newt_fg_color $f1)
-        [[ $nextfg != $sepfg ]] && seg_separator+=$nextfg
-    fi
-
-    prompt_b0=$b1
-    prompt_f0=$f1
-}
-
-# + Resolve color to prompt format escape {{{1
-__newt_bg_color () {
-    local c
-    case $1 in
-        none)
-            c=
-            ;;
-        '' | _ )
-            c="%k"
-            ;;
-        fg:*)
-            c=${1#*:}
-            [[ -z $c ]] && c=$(__newt_terminal_fg)
-            c="%K{$c}"
-            ;;
-        *)
-            c="%K{$1}"
-            ;;
-    esac
-    print -rn $c
-}
-
-__newt_fg_color () {
-    local c
-    case $1 in
-        none)
-            c=
-            ;;
-        '' | _ )
-            c="%f"
-            ;;
-        bg:*)
-            c=${1#*:}
-            [[ -z $c ]] && c=$(__newt_terminal_bg)
-            c="%F{$c}"
-            ;;
-        *)
-            c="%F{$1}"
-            ;;
-    esac
-    print -rn $c
-}
-
-# + Get bg/fg color of terminal {{{1
-#   - TODO Use escape sequence to query terminal for color, see
-#     http://thrysoee.dk/xtermcontrol/
-#     https://github.com/JessThrysoee/xtermcontrol
-#     https://superuser.com/questions/157563/programmatic-access-to-current-xterm-background-color
-#     Maybe it can be implemented with the zsh/zpty module?
-
-__newt_terminal_bg () {
-    local color
-
-    zstyle -s :prompt-theme terminal-background color
-    : ${color:=${COLORFGBG#*;}}
-    : ${color:=black}
-    print -n $color
-}
-
-__newt_terminal_fg () {
-    local color
-
-    zstyle -s :prompt-theme terminal-foreground color
-    : ${color:=${COLORFGBG%%;*}}
-    : ${color:=white}
-    print -n $color
-}
-
-# + Finalize a segment's formatting escapes {{{1
-__newt_finalize_segment () {
-    setopt local_options extended_glob
-    typeset -g prompt_b0 prompt_f0 seg_separator seg_content
-
-    # Replace %k and %f with segment bg and fg colors
-    # NB: This doesn't use zformat because that will gobble up other formats
-    # in the content, like %(X,...), which the user specified. This simple
-    # substitution will do the wrong thing with something like '%%killed',
-    # but that should be rare and *could* be worked around.
-    local k="$(__newt_bg_color $prompt_b0)"
-    local f="$(__newt_fg_color $prompt_f0)"
-    seg_content=${${seg_content:gs/%k/${k}}:gs/%f/${f}/}
-
-    # Trim whitespace
-    seg_content=${${seg_content##[[:space:]]##}%%[[:space:]]##}
-
-    zstyle -t $__newt[ctx] compact \
-        || [ -z $seg_content ] || seg_content=" $seg_content "
-
-    __newt_truecolor_escape () {
-        local n
-        [[ $1 = F ]] && n=38 || n=48
-        shift;
-        printf '%%{\x1b[%d;2;%d;%d;%dm%%}' $n "$@"
-    }
-
-    # Change %F{RRR;GGG;BBB} to TrueColor escapes
-    seg_separator="${seg_separator//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
-            __newt_truecolor_escape $match[@])}"
-    seg_content="${seg_content//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
-            __newt_truecolor_escape $match[@])}"
-}
-
 # Styling: setting defaults, getting values {{{1
 
 # Print the defaults, using zstyle format so it is easy to copy and
@@ -607,22 +429,108 @@ __newt_zstyle () {
     print -rn $val
 }
 
+
+# Colors handling {{{1
+
+# + Resolve color to prompt format sequence {{{1
+__newt_bg_color () {
+    local c
+    case $1 in
+        none)
+            c=
+            ;;
+        '' | _ )
+            c="%k"
+            ;;
+        fg:*)
+            c=${1#*:}
+            [[ -z $c ]] && c=$(__newt_terminal_fg)
+            c="%K{$c}"
+            ;;
+        *)
+            c="%K{$1}"
+            ;;
+    esac
+    print -rn $c
+}
+
+__newt_fg_color () {
+    local c
+    case $1 in
+        none)
+            c=
+            ;;
+        '' | _ )
+            c="%f"
+            ;;
+        bg:*)
+            c=${1#*:}
+            [[ -z $c ]] && c=$(__newt_terminal_bg)
+            c="%F{$c}"
+            ;;
+        *)
+            c="%F{$1}"
+            ;;
+    esac
+    print -rn $c
+}
+
+# + Get bg/fg color of terminal {{{1
+#   - TODO Use escape sequence to query terminal for color, see
+#     http://thrysoee.dk/xtermcontrol/
+#     https://github.com/JessThrysoee/xtermcontrol
+#     https://superuser.com/questions/157563/programmatic-access-to-current-xterm-background-color
+#     Maybe it can be implemented with the zsh/zpty module?
+
+__newt_terminal_bg () {
+    local color
+
+    zstyle -s :prompt-theme terminal-background color
+    : ${color:=${COLORFGBG#*;}}
+    : ${color:=black}
+    print -n $color
+}
+
+__newt_terminal_fg () {
+    local color
+
+    zstyle -s :prompt-theme terminal-foreground color
+    : ${color:=${COLORFGBG%%;*}}
+    : ${color:=white}
+    print -n $color
+}
+
+# + Convert truecolor formats into escape codes {{{1
+__newt_truecolor_escape () {
+    __newt_truecolor_escape_format () {
+        local n
+        [[ $1 = F ]] && n=38 || n=48
+        shift;
+        printf '%%{\x1b[%d;2;%d;%d;%dm%%}' $n "$@"
+    }
+
+    print -nr "${1//(#bm)%(K|F)\{([0-9]#)\;([0-9]#)\;([0-9]#)\}/$(
+            __newt_truecolor_escape_format $match[@])}"
+}
+
+
 # Update prompt strings {{{1
 
 __newt_update_prompt () {
-    local hook="$1"; shift
-    local side="$1"; shift
+    local side="$1"
+    local hook="$2"
 
     #__newt_debug "update_prompt: $hook $side $@"
-    __newt_do_segments $hook "$@" || return
-    __newt_assemble_segments $side "$@"
+    __newt_do_segments $side $hook || return
+    __newt_assemble_segments $side
 }
 
 __newt_do_segments () {
-    local hook="$1"; shift
+    local side="$1"
+    local hook="$2"
     local changed=0
     local func segment
-    for segment in "$@"; do
+    for segment in "${=__newt[$side]}"; do
         func="__newt+$segment+$hook"
         (( ${+functions[$func]} )) || continue
         $func $hook && changed=1
@@ -632,52 +540,170 @@ __newt_do_segments () {
     return 0
 }
 
+# + Assemble pre-calculated segments into a prompt string {{{1
 __newt_assemble_segments () {
-    local side="$1"; shift
+    setopt local_options extended_glob
+    local side="$1"
 
-    # These are state variables used in segment funcs
-    # The prompt string being built inside __newt_?segment
-    local prompt_result= prompt_b0= prompt_f0=
+    local direction
+    [[ $side = left ]] && direction=0 || direction=1
 
-    local func
-    [[ $side = left ]] \
-        && func=__newt_lsegment \
-        || func=__newt_rsegment
+    # For future use, this is how many lines up from the input this prompt
+    # should be drawn. stack == 0 is the input line.
+    local stack=0
 
-    local segment str state
-    for segment in "$@"; do
-        str=${__newt[+${segment}+]}
+    # TODO Make this configurable, and add more separators to it
+    separators=(
+        # Powerline
+        $'\ue0b0'  #  Left-to-right, solid (when new background)
+        $'\ue0b2'  #  Right-to-left, solid
+        $'\ue0b1'  #  Left-to-right, thin (when same background)
+        $'\ue0b3'  #  Right-to-left, thin
+    )
 
-        [[ -n $str || $__newt[+${segment}+show_empty] = 1 ]] || continue
+    # ++ Fill in arrays holding values for active segments {{{1
+    local -a segment content bg fg sep
 
-        state=${__newt[+${segment}+state]:-default}
+    local padding
+    zstyle -t $__newt[ctx] compact && padding= || padding=' '
 
-        $func \
-            "$(__newt_zstyle -x "$segment" "$state" bg)" \
-            "$(__newt_zstyle -x "$segment" "$state" fg)" \
-            $str
+    local seg state
+    for seg in "${=__newt[$side]}"; do
+        [[ -n ${__newt[+${seg}+]} || $__newt[+${seg}+show_empty] = 1 ]] \
+            || continue
+
+        segment+=$seg
+
+        state=${__newt[+${seg}+state]:-default}
+        bg+=$(__newt_zstyle -x "$seg" "$state" bg)
+        fg+=$(__newt_zstyle -x "$seg" "$state" fg)
+
+        sep+=0  # For now, all user segments are normal
+
+        # Pre-process the content a bit to add spacing, etc.
+        local tmp="${__newt[+${seg}+]}"
+
+        # Replace %k and %f with segment bg and fg colors
+        # NB: This doesn't use zformat because that will gobble up other formats
+        # in the content, like %(X,...), which the user specified. This simple
+        # substitution will do the wrong thing with something like '%%killed',
+        # but that should be rare and *could* be worked around.
+        local tmp2=$(__newt_bg_color "$bg[-1]")
+        tmp=${tmp:gs/%k/${tmp2}}
+        local tmp2=$(__newt_fg_color "$fg[-1]")
+        tmp=${tmp:gs/%f/${tmp2}}
+
+        # Trim whitespace
+        tmp=${padding}${${tmp##[[:space:]]##}%%[[:space:]]##}${padding}
+
+        content+=$tmp
     done
 
-    if [[ $side = left ]]; then
-        [[ -n $prompt_b0 ]] && prompt_result="$(__newt_bg_color $prompt_b0)$prompt_result"
-        [[ -n $prompt_f0 ]] && prompt_result="$(__newt_fg_color $prompt_f0)$prompt_result"
-
-        PS1="${prompt_result} "
+    # ++ Handle beginning & end of prompt for left/right side {{{1
+    if [[ $direction = 0 ]]; then
+        # This is a left-to-right prompt
+        if (( !stack )); then
+            # Add on a segment to prepare for user input
+            segment+=ready-for-input
+            content+=' '
+            bg+=
+            fg+=
+            sep+=-1
+        fi
     else
-        # Remove a final space, due to ZLE_RPROMPT_INDENT=1
-        [[ ${ZLE_RPROMPT_INDENT:-1} -ge 1 ]] \
-            && prompt_result="${prompt_result% }%E"
+        # This is a right-to-left prompt, so the separator precedes the
+        # segment.
 
-        # Using $reset_color ensures everything is off, and avoids some
-        # display problems that may show up with %E%b & truecolor escape
-        local reset_color=$'\e[00m'
-        RPS1="${prompt_result}%{${reset_color}%}"
+        # First, insert an empty segment at the front to effectively
+        # shift all the prompts left
+        segment[1,0]=beginning-of-line
+        content[1,0]=''
+        bg[1,0]=
+        fg[1,0]=
+
+        # Then add a null separator at the end, to finish the last segment
+        sep+=-1
+
+        # Remove a trailing space to account for $ZLE_RPROMPT_INDENT, and
+        # extend the current background color to the end of the line
+        content[-1]="${content[-1]/% /%E}"
+
+        # Add a segment to reset colors at end of line
+        segment+=end-of-line
+        content+=$'%{\e[0m%}'
+        bg+=
+        fg+=
+        sep+=-1
     fi
-}
 
-__newt_precmd_save_status () {
-    # This should be first, to save status from user's command
-    __newt[save_status]=$?
+    # ++ Gather the arrays into a prompt string {{{1
+    local result=
+
+    local i=0
+    local b0=%k f0=%f
+    local b1 f1
+    while ((i < $#content)); do
+        i=$((i+1))
+        __newt_debug "$i:$segment[i] - (${(q)content[i]}) b(${(q)bg[i]}) f(${(q)fg[$i]}) s(${(q)sep[$i]})"
+
+        # +++ Colors for the segment body {{{1
+        b1=$(__newt_bg_color "$bg[$i]")
+        [[ $b0 = $b1 ]] || result+=$b1
+        b0=$b1
+        f1=$(__newt_fg_color "$fg[$i]")
+        [[ $f0 = $f1 ]] || result+=$f1
+        f0=$f1
+
+        # +++ The segment content proper {{{1
+        result+=$content[$i]
+
+        # +++ The separator {{{1
+        if (( ${sep[$i]} >= 0 )); then
+            if (( $i >= $#content )); then
+                print "IMPOSSIBLE, index $i has a separator (${(qq)sep[$i]}) off the end ($#content)" >&2
+                bg[$i+1]=196
+                fg[$i+1]=220
+            fi
+
+            # The sep[i] is 0 for "normal" direction (points right on a left-
+            # hand prompt, and points left on a right-hand prompt). It is 1
+            # for a reversed separator. So XOR of prompt direction and sep[i]
+            # gives the direction of the separator itself.
+            local sep_direction=$((direction ^ ${sep[$i]}))
+            if [[ $bg[$i] = $bg[$i+1] ]]; then
+                local thin=1
+                b1=$(__newt_bg_color "$bg[$i]")
+                # When direction=1 (right prompt), the separator precedes its
+                # segment, so look there for the color
+                f1=$(__newt_fg_color "$fg[$i+$direction]")
+            else
+                thin=0
+                # Solid separator uses the background color of the dominant
+                # segment as its foreground. When sep_direction=1 ("points
+                # to the left"), the dominant segment is to the right,
+                # otherwise it is this segment. Background is from the
+                # opposite.
+                f1=$(__newt_fg_color "bg:$bg[$i+$sep_direction]")
+                b1=$(__newt_bg_color "$bg[$i+$((sep_direction ^ 1))]")
+            fi
+            [[ $b0 == $b1 ]] || result+=$b1
+            b0=$b1
+            [[ $f0 == $f1 ]] || result+=$f1
+            f0=$f1
+            local index=$(( 1 + 2 * thin + sep_direction ))
+            __newt_debug "+ sep index $index thin($thin) sep_dir($sep_direction)"
+            result+=${separators[$index]}
+        fi
+    done
+
+    # ++ Store the prompt string {{{1
+
+    # Change %F{RRR;GGG;BBB} to TrueColor escapes
+    result=$(__newt_truecolor_escape "$result")
+
+    __newt_debug "$side = [${(q)result}]"
+
+    [[ $side = left ]] && PS1=$result || RPS1=$result
 }
 
 
@@ -724,8 +750,8 @@ __newt_add_hooks () {
 
 __newt_hook () {
     local hook="$1"
-    __newt_update_prompt $hook left ${(Oa)=__newt[left]}
-    __newt_update_prompt $hook right ${=__newt[right]}
+    __newt_update_prompt left  $hook
+    __newt_update_prompt right $hook
 
     if [[ $hook = zle-* ]]; then
         zle reset-prompt
@@ -809,8 +835,8 @@ prompt_newt_preview () {
     fi
 
     __newt_preview_show () {
-        __newt_assemble_segments left ${(Oa)=__newt[left]}
-        __newt_assemble_segments right ${=__newt[right]}
+        __newt_assemble_segments left
+        __newt_assemble_segments right
         [[ -o promptcr ]] && print -n $'\r'; :
         print -P "${PS1}$*%-1<<${(l:COLUMNS:: :)}${RPS1}"
     }
@@ -1135,8 +1161,6 @@ EOF
 
 # Main Prompt Setup {{{1
 
-__newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
-
 prompt_newt_setup () {
     autoload -Uz add-zsh-hook
     autoload -Uz add-zle-hook-widget
@@ -1244,8 +1268,8 @@ prompt_newt_setup () {
     #__newt_default vcs     dirty     bg "$__newt[color-magenta]"
     #__newt_default vcs     dirty     fg "$__newt[color-black]"
 
-    __newt_do_segments setup ${=__newt[left]}
-    __newt_do_segments setup ${=__newt[right]}
+    __newt_do_segments left  setup
+    __newt_do_segments right setup
 
     # + Finalization {{{1
 
@@ -1262,6 +1286,9 @@ prompt_newt_setup () {
 
     return 0
 }
+
+#__newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
+__newt_debug () { :; }
 
 [[ -o kshautoload ]] || prompt_newt_setup "$@"
 

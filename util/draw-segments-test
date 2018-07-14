@@ -1,0 +1,129 @@
+#! /bin/zsh
+
+local -A opts
+zparseopts -D -A opts - d
+if (($+opts[-d])); then
+    debug () { print -r "$@" >&2; }
+else
+    debug () { :; }
+fi
+
+local -a content bg fg sep
+
+local i
+
+powersep=(
+    $'\ue0b0'  # 
+    $'\ue0b2'  # 
+    $'\ue0b1'  # 
+    $'\ue0b3'  # 
+)
+
+# For future use, this is how many lines up from the input this prompt
+# should be drawn. stack == 0 is the input line.
+local stack=0
+
+content=( one two three four )
+bg=( '' '' 3 3 )
+fg=( 124 19 40 202 )
+
+# Handle args to this test script
+local direction=${1:-0}
+for i in ${@[2,-1]}; do (($i)) && sep[$i]=1; done
+
+
+i=0
+while (($i < $#content)); do
+    i=$((i+1))
+    content[$i]=" $content[$i] "
+    [[ -n $bg[$i] ]] && bg[$i]="%K{${bg[$i]}}" || bg[$i]=%k
+    [[ -n $fg[$i] ]] && fg[$i]="%F{${fg[$i]}}" || fg[$i]=%f
+    [[ -n ${sep[$i]} ]] || sep[$i]=0
+done
+
+if [[ $direction = 0 ]]; then
+    # This is a left prompt
+    # Add on a segment to prepare for input
+    if (( !stack )); then
+        content+=' '
+        bg+=%k
+        fg+=%f
+        sep+=-1
+    fi
+else
+    # This is a right prompt, so the separator precedes the segment.
+
+    # First, insert an empty segment at the front to effectively shift
+    # all the prompts left.
+    content[1,0]=''
+    bg[1,0]=%k
+    fg[1,0]=%f
+
+    # Then add a null separator at the end, to finish the last segment
+    sep+=-1
+
+    # Remove a trailing space to account for $ZLE_RPROMPT_INDENT, and
+    # extend the current background color to the end of the line
+    content[-1]="${content[-1]/% /%E}"
+
+    # Add a segment to reset colors at end of line
+    content+=$'%{\e[0m%}'
+    bg+=
+    fg+=
+    sep+=-1
+fi
+
+local str=
+i=0
+local b0=%k f0=%f
+local b1 f1
+while ((i < $#content)); do
+    i=$((i+1))
+    debug "$i(${(qq)content[i]}) b(${(qq)bg[i]}) f(${(qq)fg[$i]}) s(${(qq)sep[$i]})"
+    [[ $b0 == $bg[$i] ]] || str+=$bg[$i]; b0=$bg[$i]
+    [[ $f0 == $fg[$i] ]] || str+=$fg[$i]; f0=$fg[$i]
+    str+=${content[$i]}
+    if (( ${sep[$i]} >= 0 )); then
+        if (( $i >= $#content )); then
+            print "IMPOSSIBLE, index $i has a separator (${(qq)sep[$i]}) off the end ($#content)" >&2
+            bg[$i+1]='%K{196}'
+            fg[$i+1]='%F{220}'
+        fi
+
+        # The sep[i] is 0 for "normal" direction (points right on a left-
+        # hand prompt, and points left on a right-hand prompt). It is 1
+        # for a reversed separator. So XOR of prompt direction and sep[i]
+        # gives the direction of the separator itself.
+        local sep_direction=$((direction ^ ${sep[$i]}))
+        if [[ $bg[$i] = $bg[$i+1] ]]; then
+            local thin=1
+            b1=$bg[$i]
+            # When direction=1 (right prompt), the separator precedes its
+            # segment, so look there for the color
+            f1=$fg[$i+$direction]
+        else
+            thin=0
+            # Thick separator uses the background color of the dominant
+            # segment as its foreground. When sep_direction=1 ("points
+            # to the left"), the dominant segment is to the right,
+            # otherwise it is this segment. Background is from the
+            # opposite.
+            f1=${${bg[$i+$sep_direction]:gs/K/F}:gs/k/'F{17}'}
+            b1=$bg[$i+$((sep_direction ^ 1))]
+        fi
+        [[ $b0 == $b1 ]] || str+=$b1; b0=$b1
+        [[ $f0 == $f1 ]] || str+=$f1; f0=$f1
+        local index=$(( 1 + 2 * thin + sep_direction ))
+        debug "+ sep index $index thin($thin) sep_dir($sep_direction)"
+        str+=${powersep[$index]}
+    fi
+done
+
+debug ${(qqqq)str}
+
+print ""
+local setup=
+(( direction )) && setup="$*▒%-1<<${(l:COLUMNS:: :)}"
+print -Pn $setup$str
+(( !direction )) && printf " %s" "$*▒"
+print ""
