@@ -1,28 +1,24 @@
-Newt ZSH Theme
-==============
+= Newt ZSH Theme
+:demo-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
+:preview-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 
 >   “She turned me into a newt!”  
 >   “A newt?”  
 >   “… I got better.”  
 
-![Newt Theme Demo][demo]
+image::{demo-image}[Newt Theme Demo]
 
-[demo]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
-
-Styles
-------
+== Styles
 
 Newt comes with these pre-defined styles:
 *default, denver, forest, meadow, mono*.
 
 Use a style with `prompt newt meadow`.
 
-![Newt Theme Preview][preview]
-
-[preview]: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
+image::{preview-image}[Newt Theme Preview]
 
 These styles are simply shorthand for the `zstyle` configuration, as
-described in **Styling** below. So the style can be used to get most
+described in <<Styling>>. So the style can be used to get most
 things as you like, and then individual elements can be refined further.
 
 ### Custom styles
@@ -32,7 +28,7 @@ giving a style name and a list of colors. Each color can be
 
 - `black`, `red`, `yellow`, `green`, `blue`, `magenta`, `cyan`, `white`, or
 - a color number supported by your terminal, or
-- a truecolor specification as described in **Truecolor support** below, or
+- a truecolor specification as described in <<Truecolor support>>, or
 - `''` or `_`, meaning the terminal's default background / foreground, or
 - `none`, meaning do not set the color, use whatever is already active
 
@@ -40,20 +36,20 @@ giving a style name and a list of colors. Each color can be
 
 The list of colors is
 
-1.  Primary background
-2.  Primary foreground
-3.  Secondary background
-4.  Secondary foreground
-5.  Alert background
-6.  Alert foreground
-7.  Red
-8.  Green
-9.  Yellow
-10. Blue
-11. Magenta
-12. Cyan
-13. Black
-14. White
+. Primary background
+. Primary foreground
+. Secondary background
+. Secondary foreground
+. Alert background
+. Alert foreground
+. Red
+. Green
+. Yellow
+. Blue
+. Magenta
+. Cyan
+. Black
+. White
 
 Since the *forest* style specifies 4 colors, the following will
 change the Alert (colors 5 & 6) to pale yellow on a hot pink
@@ -189,15 +185,16 @@ the `vicmd` mode can be styled with:
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
 
-NOTE: Only `viins` and `vicmd` states are available by default.
-The others require the [zsh-vim-mode][] plugin.
+:zsh-vim-mode: https://github.com/softmoth/zsh-vim-mode[vim-mode]
 
-[zsh-vim-mode]: https://github.com/softmoth/zsh-vim-mode
+NOTE: Only `viins` and `vicmd` states are available by default.
+The others require the {zsh-vim-mode} plugin.
 
 Truecolor support
 -----------------
+:truecolor: https://gist.github.com/XVilka/8346728
 
-If your terminal [supports Truecolor escape sequences][truecolor],
+If your terminal {truecolor}[supports Truecolor escape sequences],
 then you can use them anywhere a color can be specified. That is,
 either in a `zstyle` to set a color, or directly in a `%K{...}` or
 `%F{...}` escape in the prompt text. The color must be given as
@@ -206,7 +203,6 @@ either in a `zstyle` to set a color, or directly in a `%K{...}` or
     zstyle ':vcs_info:*' stagedstr '%F{250;128;114}+'
     zstyle ':prompt-theme:newt:*:vi_mode:search' bg '199;21;133'
 
-[truecolor]: https://gist.github.com/XVilka/8346728
 
 Miscellaneous settings
 ----------------------
