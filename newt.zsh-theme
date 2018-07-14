@@ -917,7 +917,7 @@ giving a style name and a list of colors. Each color can be
 Every part of the prompt can be configured individually. See the full
 documentation for details:
 
-        https://github.com/softmoth/zsh-prompt-newt/
+        https://github.com/softmoth/zsh-prompt-newt/#readme
 EOF
 
     # promptinit doesn't handle cleanup

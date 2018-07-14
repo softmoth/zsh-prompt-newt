@@ -1,4 +1,5 @@
 = Newt ZSH Theme
+:toc: preamble
 :demo-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 :preview-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 
@@ -123,16 +124,31 @@ The segments used for left and right prompts can be set with:
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
 
-### Execution time
+### `context`: User and host name
 
-The `exec_time` segment states are `long` and `default`.
+User name is hidden unless it is different from `$DEFAULT_USER`.
+
+Host name is hidden unless `$SSH_CLIENT` is set.
+
+### `dir`: Current directory
+
+It uses the `'%4~'` zsh format, which shows nested
+directories to four levels.
+
+### `exec_time`: Execution time
+
+The states are `default` and `long`.
 
 The threshold from `default` to `long` can be set with
-`zstyle ':prompt-theme:newt:*:exec_time' threshold 30`.
+
+    zstyle ':prompt-theme:newt:*:exec_time' threshold 30
+
 The default is 5 seconds. It can be fractional, for example `0.75`.
 
 The precision can be set with
-`zstyle ':prompt-theme:newt:*:exec_time' precision 3`.
+
+    zstyle ':prompt-theme:newt:*:exec_time' precision 3
+
 The default is 1 if the execution time is below 10 seconds,
 and 0 otherwise.
 
@@ -145,7 +161,20 @@ threshold are not shown). The format can be set with:
     # %t: human-friendly
     zstyle ':prompt-theme:newt:*:exec_time' default '🕑%t'
 
-### Exit status
+### `history`: History number
+
+### `jobs`: Background jobs
+
+### `none`: Placeholder to do nothing
+
+### `prompt_time`: Prompt time
+
+Displays how long it takes for the prompt itself to be drawn. This
+segment is off by default. The precision can be set with
+
+    zstyle ':prompt-theme:newt:*:prompt_time' precision 3
+
+### `status`: Exit status
 
 The `status` segment states are `ok`, `error` and `suspended`. By default
 only `error` status is shown. To always show a status, set:
@@ -153,42 +182,34 @@ only `error` status is shown. To always show a status, set:
     zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
     zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
 
-### Prompt time (dev)
+### `time`: Time
 
-The `prompt_time` segment displays how long it takes for the prompt
-itself to be drawn. This segment is off by default. The precision can be
-set with `zstyle ':prompt-theme:newt:*:prompt_time' precision 3`.
-
-### Time
-
-The `time` segment shows the current time. The format can be set with
+Shows the current time. The format can be set with
 
     zstyle ':prompt-theme:newt:*:time' default '%*'  # HH:MM:SS
 
-### Version control
+### `vcs`: Version control
 
-The `vcs` segment states are `clobbered`, `root`, `action`, `dirty`
-and `default`. Most of the display is controlled by `VCS_Info`:
+States are `clobbered`, `root`, `action`, `dirty` and `default`. Most of
+the display is controlled by *`vcs_info`*:
 
     # See zshcontrib(1) for more options related to version control
     zstyle ':vcs_info:*' enable git cvs svn bzr hg
     zstyle -L ':vcs_info:*'
 
-### Vi mode
+### `vi_mode`: Vi mode
+:zsh-vim-mode: https://github.com/softmoth/zsh-vim-mode[vim-mode]
 
-The `vi_mode` segment has settings to configure the colors and
-text of the mode indicator. The recognized states are `viins`,
-`vicmd`, `replace`, `isearch`, `visual` and `vline`. For example,
-the `vicmd` mode can be styled with:
+States are `viins`, `vicmd`, `replace`, `isearch`, `visual` and `vline`.
+
+NOTE: Only `viins` and `vicmd` states are available by default.
+The others require the {zsh-vim-mode} plugin.
+
+Text and colors can be changed. For example:
 
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
-
-:zsh-vim-mode: https://github.com/softmoth/zsh-vim-mode[vim-mode]
-
-NOTE: Only `viins` and `vicmd` states are available by default.
-The others require the {zsh-vim-mode} plugin.
 
 Truecolor support
 -----------------
