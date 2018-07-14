@@ -26,8 +26,17 @@ __newt+context+precmd () {
 }
 
 # + dir: Current directory {{{1
+
+__newt+dir+setup () {
+    __newt_default dir default '%4~'
+    __newt_default dir     \*        bg "$__newt[color3]"
+    __newt_default dir     \*        fg "$__newt[color4]"
+    __newt_default dir     root      bg "$__newt[color5]"
+    __newt_default dir     root      fg "$__newt[color6]"
+}
+
 __newt+dir+precmd () {
-    __newt[+dir+]=$(__newt_zstyle -d '%4~' dir default)
+    __newt[+dir+]=$(__newt_zstyle dir default)
 
     [[ $EUID = 0 ]] \
         && __newt[+dir+state]=root \
@@ -204,6 +213,7 @@ __newt+vcs+setup () {
     local green=$(__newt_fg_color $__newt[color-green])
     local yellow=$(__newt_fg_color $__newt[color-yellow])
     local red=$(__newt_fg_color $__newt[color-red])
+
     #zstyle :vcs_info:'*+*:*' debug true
     zstyle :vcs_info:\* check-for-changes true
     zstyle :vcs_info:\* stagedstr     $green$'\u25cf'       # ●
@@ -222,6 +232,13 @@ __newt+vcs+setup () {
         newt-untracked \
         newt-finalize \
         # ∴
+
+    __newt_default vcs     \*        bg "$__newt[color3]"
+    __newt_default vcs     \*        fg "$__newt[color4]"
+    __newt_default vcs     clobbered bg "$__newt[color5]"
+    __newt_default vcs     clobbered fg "$__newt[color6]"
+    __newt_default vcs     root      bg "$__newt[color5]"
+    __newt_default vcs     root      fg "$__newt[color6]"
 }
 
 __newt+vcs+precmd () {
@@ -941,7 +958,7 @@ prompt_newt_setup () {
 
     add-zsh-hook precmd __newt_precmd_save_status
 
-    # + Styling {{{1
+    # + Looks {{{1
 
     # Inverse colors for defaults
     local -a colorbgfg=( $(__newt_terminal_fg) $(__newt_terminal_bg) )
@@ -1008,36 +1025,19 @@ prompt_newt_setup () {
 
     unfunction $0-set-colors
 
+    # + Finalization {{{1
+
     __newt_default left  'history time context notice dir'
     __newt_default right 'vi_mode status exec_time jobs vcs'
 
     __newt[left]=$(__newt_zstyle  left)
     __newt[right]=$(__newt_zstyle right)
 
-    __newt_default vi_mode \*        bg "$__newt[color-yellow]"
     __newt_default \*      \*        bg "$__newt[color1]"
     __newt_default \*      \*        fg "$__newt[color2]"
-    __newt_default dir     \*        bg "$__newt[color3]"
-    __newt_default dir     \*        fg "$__newt[color4]"
-    __newt_default dir     root      bg "$__newt[color5]"
-    __newt_default dir     root      fg "$__newt[color6]"
-
-    __newt_default vcs     \*        bg "$__newt[color3]"
-    __newt_default vcs     \*        fg "$__newt[color4]"
-    __newt_default vcs     clobbered bg "$__newt[color5]"
-    __newt_default vcs     clobbered fg "$__newt[color6]"
-    __newt_default vcs     root      bg "$__newt[color5]"
-    __newt_default vcs     root      fg "$__newt[color6]"
-
-    #__newt_default vcs     action    bg "$__newt[color-cyan]"
-    #__newt_default vcs     action    fg "$__newt[color-black]"
-    #__newt_default vcs     dirty     bg "$__newt[color-magenta]"
-    #__newt_default vcs     dirty     fg "$__newt[color-black]"
 
     __newt_do_segments left  setup
     __newt_do_segments right setup
-
-    # + Finalization {{{1
 
     __newt_add_hooks add-zsh-hook '' \
         ${=$(__newt_list_zsh_hooks)}
