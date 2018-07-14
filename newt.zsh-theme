@@ -398,20 +398,20 @@ __newt_default () {
 __newt_zstyle () {
     local -A opts
     zparseopts -A opts -D - d: x
-    local style="${@[-1]}"
+    local look="${@[-1]}"
     local ctx=($__newt[ctx] "${@[1,-2]}")
 
     local val; unset val
     # See if a setting is defined
-    zstyle -t ${(j.:.)ctx} "$style"
+    zstyle -t ${(j.:.)ctx} "$look"
     if [[ $? -ne 2 ]]; then
-        zstyle -s ${(j.:.)ctx} "$style" val
+        zstyle -s ${(j.:.)ctx} "$look" val
     else
         # If -x option, then do a simplified wildcard search through
         # the defaults. Say context is a b c, then this will check for
         # "a b c", "a b *", "a * *", "* * *", and use the first match.
         # If not -x option, then only look for a full "a b c" match.
-        ctx=( $ctx[2,-1] $style )
+        ctx=( $ctx[2,-1] $look )
         local i
         (( $+opts[-x] )) && i=$(($#ctx - 1)) || i=0
         while true; do
@@ -814,8 +814,8 @@ prompt_newt_cleanup () {
 
     unset __newt
     unset __newt_defaults
-    unset __newt_style
-    unset PROMPT_NEWT_STYLE
+    unset __newt_look
+    unset PROMPT_NEWT_LOOK
 
     autoload -Uz prompt_newt_setup
 }
@@ -830,7 +830,7 @@ prompt_newt_preview () {
     if (( $#* )); then
         set -- "$*"
     else
-        set -- default ${(ok)__newt_style:#default} \
+        set -- default ${(ok)__newt_look:#default} \
             'example black 5 white 4 red 3'
     fi
 
@@ -841,7 +841,7 @@ prompt_newt_preview () {
         print -P "${PS1}$*%-1<<${(l:COLUMNS:: :)}${RPS1}"
     }
 
-    __newt_preview_style () {
+    __newt_preview_look () {
         count=$((count+1))
         (( count > 1 )) && print ""
         print -n "newt theme"
@@ -885,11 +885,11 @@ prompt_newt_preview () {
     local -a fake_vi=( vicmd  NORMAL  isearch SEARCH  replace REPLACE
                        visual VISUAL  vline   V-LINE  viins   '' )
 
-    for style in "$@"; do
-        __newt_preview_style $=style
+    for look in "$@"; do
+        __newt_preview_look $=look
     done
 
-    unfunction __newt_preview_show __newt_preview_style
+    unfunction __newt_preview_show __newt_preview_look
     prompt_newt_cleanup
 }
 
@@ -897,22 +897,22 @@ prompt_newt_preview () {
 # Help {{{1
 
 prompt_newt_help () {
-    local styles='default, '${(j., .)${(ok)__newt_style//#%default}}
+    local looks='default, '${(j., .)${(ok)__newt_look//#%default}}
     cat <<EOF
 >   “She turned me into a newt!”
 >   “A newt?”
 >   “… I got better.”
 
-Newt comes with these pre-defined styles:
+Newt comes with these pre-defined looks:
 
-${styles}
+${looks}
 EOF
     cat <<'EOF'
 
-Use a style with `prompt newt meadow`.
+Use a look with `prompt newt meadow`.
 
-Create a `bespoke` style with `prompt newt bespoke blue white magenta`,
-giving a style name and a list of colors. Each color can be
+Create a `bespoke` look with `prompt newt bespoke blue white magenta`,
+giving a name and a list of colors. Each color can be
 
 Every part of the prompt can be configured individually. See the full
 documentation for details:
@@ -946,42 +946,42 @@ prompt_newt_setup () {
     # Inverse colors for defaults
     local -a colorbgfg=( $(__newt_terminal_fg) $(__newt_terminal_bg) )
 
-    typeset -g -A __newt_style
-    __newt_style[default]=$colorbgfg
-    __newt_style[denver]="'' 202 '' 33 '' 196"
-    __newt_style[forest]='22 229 24 229'
-    __newt_style[meadow]='149 235 81 235'
-    __newt_style[mono]='235 242 238 250 235 197'
+    typeset -g -A __newt_look
+    __newt_look[default]=$colorbgfg
+    __newt_look[denver]="'' 202 '' 33 '' 196"
+    __newt_look[forest]='22 229 24 229'
+    __newt_look[meadow]='149 235 81 235'
+    __newt_look[mono]='235 242 238 250 235 197'
 
-    local -a style
+    local -a look
 
     if [[ $#@ == 0 || $1 = '--' ]]; then
-        style[1]=( "${${(z)${PROMPT_NEWT_STYLE:-${1-default}}}[@]}" )
+        look[1]=( "${${(z)${PROMPT_NEWT_LOOK:-${1-default}}}[@]}" )
         (( $#@ )) && shift
     fi
-    style+=("${(qq)@}")
+    look+=("${(qq)@}")
 
-    (( $#style )) && case ${(Q)style[1]} in
+    (( $#look )) && case ${(Q)look[1]} in
         '' | _ | none | fg:* | bg:* | [0-9]* \
         | black | red | green | yellow | blue | magenta | cyan | white )
-            print "$0: ERROR: Color found where style name expected." \
+            print "$0: ERROR: Color found where look name expected." \
                 "Did you intend: \`$0 ${USER:-'pretty'} ${(q)@}\`?"
-            style[1,0]='--'
+            look[1,0]='--'
             ;;
     esac
 
-    style[1]=${(Q)style[1]}
+    look[1]=${(Q)look[1]}
 
     # Env variable can be used in .zshrc, etc.
-    export PROMPT_NEWT_STYLE="${style[*]}"
-    __newt[style]=$style[1]
+    export PROMPT_NEWT_LOOK="${look[*]}"
+    __newt[look]=$look[1]
 
-    if (( $+__newt_style[$style[1]] )); then
-        # Splice in the predefined colors for this style
-        style[2,0]=("${${(z)${__newt_style[$style[1]]}}[@]}")
+    if (( $+__newt_look[$look[1]] )); then
+        # Splice in the predefined colors for this look
+        look[2,0]=("${${(z)${__newt_look[$look[1]]}}[@]}")
     fi
 
-    __newt[ctx]=:prompt-theme:newt:$__newt[style]
+    __newt[ctx]=:prompt-theme:newt:$__newt[look]
 
     $0-set-colors () {
         # Primary segment
@@ -1004,7 +1004,7 @@ prompt_newt_setup () {
         __newt[color-white]=${14-white}
     }
 
-    $0-set-colors "${(Q)style[2,-1][@]}"
+    $0-set-colors "${(Q)look[2,-1][@]}"
 
     unfunction $0-set-colors
 

@@ -3,29 +3,31 @@
 :demo-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 :preview-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 
->   “She turned me into a newt!”  
->   “A newt?”  
->   “… I got better.”  
+____
+“She turned me into a newt!” +
+“A newt?” +
+“… I got better.” +
+____
 
 image::{demo-image}[Newt Theme Demo]
 
-== Styles
+== Looks
 
-Newt comes with these pre-defined styles:
-*default, denver, forest, meadow, mono*.
+Newt comes with these pre-defined looks:
+_default, denver, forest, meadow, mono_.
 
-Use a style with `prompt newt meadow`.
+Use a look with `prompt newt meadow`.
 
 image::{preview-image}[Newt Theme Preview]
 
-These styles are simply shorthand for the `zstyle` configuration, as
-described in <<Styling>>. So the style can be used to get most
+These looks are simply shorthand for the `zstyle` configuration, as
+described in <<Styling>>. So the look can be used to get most
 things as you like, and then individual elements can be refined further.
 
-### Custom styles
+### Custom looks
 
-Create a `bespoke` style with `prompt newt bespoke blue white magenta`,
-giving a style name and a list of colors. Each color can be
+Create an `adhoc` look with `prompt newt adhoc blue white magenta`,
+giving a name and a list of colors. Each color can be
 
 - `black`, `red`, `yellow`, `green`, `blue`, `magenta`, `cyan`, `white`, or
 - a color number supported by your terminal, or
@@ -52,7 +54,7 @@ The list of colors is
 . Black
 . White
 
-Since the *forest* style specifies 4 colors, the following will
+Since the _forest_ look specifies 4 colors, the following will
 change the Alert (colors 5 & 6) to pale yellow on a hot pink
 background:
 
@@ -61,11 +63,11 @@ background:
 ### Re-running `prompt newt`
 
 When `prompt newt` is run with no arguments, or if the first argument
-is `--`, it uses the value of `$PROMPT_NEWT_STYLE` in the environment.
-And it always sets `PROMPT_NEWT_STYLE` to the current settings.
+is `--`, it uses the value of `$PROMPT_NEWT_LOOK` in the environment.
+And it always sets `PROMPT_NEWT_LOOK` to the current settings.
 
-This means that, for example, `sudo -Es` will inherit the current style.
-It is possible to add more colors to the current style by following the
+This means that, for example, `sudo -Es` will inherit the current look.
+It is possible to add more colors to the current look by following the
 `--` with colors. For example
 
     prompt newt example blue white
@@ -79,23 +81,23 @@ Styling
 -------
 
 Segments can be configured with the context
-`:prompt-theme:newt:STYLE:SEGMENT:STATE`.
+`:prompt-theme:newt:LOOK:SEGMENT:STATE`.
 
-*Style* can be any word you like, except for a color name (`red`, `_`,
-etc.). You can call `prompt newt STYLE` to use a particular style.
+_Look_ can be any word you like, except for a color name (`red`, `_`,
+etc.). You can call `prompt newt LOOK` to use a particular look.
 
-If just `prompt newt` is run, the style is inherited from the
-`$PROMPT_NEWT_STYLE` environment variable, or `default`.
+If just `prompt newt` is run, the look is inherited from the
+`$PROMPT_NEWT_LOOK` environment variable, or `default`.
 
-*Segment* is the name of the segment, e.g., `vcs` or `dir`.
+_Segment_ is the name of the segment, e.g., `vcs` or `dir`.
 
-*State* is segment-specific, and is `default` for most segments
+_State_ is segment-specific, and is `default` for most segments
 most of the time.
 
 Run `prompt_newt_defaults` to show the built-in settings.
 Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
 To remove an override, run
-`zstyle -d ':prompt-theme:newt:*:the:pattern' [style]`.
+`zstyle -d ':prompt-theme:newt:*:the:pattern' [look]`.
 
 ### Examples
 
@@ -191,7 +193,7 @@ Shows the current time. The format can be set with
 ### `vcs`: Version control
 
 States are `clobbered`, `root`, `action`, `dirty` and `default`. Most of
-the display is controlled by *`vcs_info`*:
+the display is controlled by _`vcs_info`_:
 
     # See zshcontrib(1) for more options related to version control
     zstyle ':vcs_info:*' enable git cvs svn bzr hg
