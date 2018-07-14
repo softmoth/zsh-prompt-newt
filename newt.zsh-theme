@@ -382,26 +382,32 @@ __newt+vi_mode+hook () {
 # Print the defaults, using zstyle format so it is easy to copy and
 # modify to create a zstyle override.
 prompt_newt_defaults () {
-    local -a z
-    local -i m1 m2
-    local a b
-    for k v in "${(kv)__newt_defaults[@]}"; do
-        a=${${=k}[1,-2]}
-        b=${${=k}[-1]}
-        (( m1 < $#a )) && m1=$#a
-        (( m2 < $#b )) && m2=$#b
+    local -a zstyles
+    local -i max1 max2
+    local -a context style value
+
+    local k
+    for k in "${(@k)__newt_defaults}"; do
+        local tmp=${__newt_defaults[$k]}
+        [[ ${(q)tmp} = *\\* ]] && value+=${(qq)tmp} || value+=${(q)tmp}
+        k=(':prompt-theme:newt:*' "${(z)k}")
+        tmp="${(j.:.)k[1,-2]}"
+        [[ ${(q)tmp} = *\\* ]] && context+=${(qq)tmp} || context+=${(q)tmp}
+        tmp=${(q)k[-1]}
+        [[ ${(q)tmp} = *\\* ]] && style+=${(qq)tmp} || style+=${(q)tmp}
+
+        (( max1 < ${#context[-1]} )) && max1=${#context[-1]}
+        (( max2 < ${#style[-1]} )) && max2=${#style[-1]}
     done
 
-    local ctx=':prompt-theme:newt:*:'
-    for k v in "${(kv)__newt_defaults[@]}"; do
-        z[$#z+1]=$(printf \
-                'zstyle   %-*s %-*s %s' \
-                $(($#ctx + m1 + 4)) ${(qq):-$ctx${(j.:.)${=k}[1,-2]}} \
-                $((m2 + 2)) "${(q)${=k}[-1]}" \
-                ${(q)v})
+    local i=0
+    while (( i < $#context )); do
+        i=$((i+1))
+        zstyles+=$(printf 'zstyle  %-*s  %-*s  %s' \
+                $max1 "$context[$i]" $max2 "$style[$i]" "$value[$i]")
     done
 
-    LANG=C print -o -lr $z
+    LANG=C print -o -lr $zstyles
 }
 
 __newt_default () {
