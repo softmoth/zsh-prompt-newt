@@ -134,8 +134,10 @@ Host name is hidden unless `$SSH_CLIENT` is set.
 
 ### `dir`: Current directory
 
-It uses the `'%4~'` zsh format, which shows nested
-directories to four levels.
+It uses the `'%4~'` zsh format by default, which shows nested directories
+to four levels. Set the format with
+
+    zstyle :prompt-theme:newt:\*:dir default '%/'
 
 ### `exec_time`: Execution time
 
@@ -167,7 +169,16 @@ threshold are not shown). The format can be set with:
 
 ### `jobs`: Background jobs
 
+States are `default` and `zero`. The `zero` state defaults to empty, so
+when there are no background jobs, nothing is shown. The `default` state
+shows an icon and, if there is more than one job, the number of jobs.
+Run `prompt_newt_defaults` to see the full setting.
+
 ### `none`: Placeholder to do nothing
+
+This might be used to disable the right side prompt, for example:
+
+    zstyle ':prompt-theme:newt:*' right none
 
 ### `prompt_time`: Prompt time
 

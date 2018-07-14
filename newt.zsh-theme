@@ -27,7 +27,7 @@ __newt+context+precmd () {
 
 # + dir: Current directory {{{1
 __newt+dir+precmd () {
-    __newt[+dir+]='%4~'
+    __newt[+dir+]=$(__newt_zstyle -d '%4~' dir default)
 
     [[ $EUID = 0 ]] \
         && __newt[+dir+state]=root \
