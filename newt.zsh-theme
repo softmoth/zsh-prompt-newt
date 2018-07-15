@@ -214,21 +214,21 @@ __newt+vcs+setup () {
     local yellow=$(__newt_fg_color $__newt[color-yellow])
     local red=$(__newt_fg_color $__newt[color-red])
 
-    #zstyle :vcs_info:'*+*:*' debug true
-    zstyle :vcs_info:\* check-for-changes true
-    zstyle :vcs_info:\* stagedstr     $green$'\u25cf'       # ●
-    zstyle :vcs_info:\* untrackedstr  $yellow$'\u25cf'      # ●
-    zstyle :vcs_info:\* unstagedstr   $red$'\u25cf'         # ●
-    zstyle :vcs_info:\* formats       $'\ue0a0%m%u%c %f%b'  # 
-    zstyle :vcs_info:\* actionformats $'\ue0a0 %b|%a%f'     # 
+    #__newt_other_default ':vcs_info:*+*:*' debug true
+    __newt_other_default ':vcs_info:*' check-for-changes true
+    __newt_other_default ':vcs_info:*' stagedstr     $green$'\u25cf'       # ●
+    __newt_other_default ':vcs_info:*' untrackedstr  $yellow$'\u25cf'      # ●
+    __newt_other_default ':vcs_info:*' unstagedstr   $red$'\u25cf'         # ●
+    __newt_other_default ':vcs_info:*' formats       $'\ue0a0%m%u%c %f%b'  # 
+    __newt_other_default ':vcs_info:*' actionformats $'\ue0a0 %b|%a%f'     # 
 
-    zstyle :vcs_info:git\*+post-backend:\* hooks \
+    __newt_other_default ':vcs_info:git*+post-backend:*' hooks \
         newt-show-gitdir \
         newt-remotebranch \
         newt-upstream \
         # ∴
 
-    zstyle :vcs_info:git\*+set-message:\* hooks \
+    __newt_other_default ':vcs_info:git*+set-message:*' hooks \
         newt-untracked \
         newt-finalize \
         # ∴
@@ -379,8 +379,8 @@ __newt+vi_mode+hook () {
 
 # Styling: setting defaults, getting values {{{1
 
-# Print the defaults, using zstyle format so it is easy to copy and
-# modify to create a zstyle override.
+# + Print the defaults {{{1
+# Uses zstyle format so it is easy to copy and modify
 prompt_newt_defaults () {
     local -a zstyles
     local -i max1 max2
@@ -410,6 +410,7 @@ prompt_newt_defaults () {
     LANG=C print -o -lr $zstyles
 }
 
+# + Set a style's default {{{1
 __newt_default () {
     local -A opts
     zparseopts -A opts -D - d
@@ -418,6 +419,7 @@ __newt_default () {
         || __newt_defaults+=(["${*[1,-2]}"]="${*[-1]}")
 }
 
+# + Look up a style {{{1
 __newt_zstyle () {
     local -A opts
     zparseopts -A opts -D - d: x
@@ -450,6 +452,59 @@ __newt_zstyle () {
         (( $+val )) || val=$opts[-d]
     fi
     print -rn $val
+}
+
+# + Set a default for non-newt styles {{{1
+# NOTE: This needs to be called during setup, not from later hooks.
+__newt_other_default () {
+    # Only set the style if it doesn't already exist
+    zstyle -t "$1" "$2"
+    if [[ $? -eq 2 ]]; then
+        zstyle "$@"
+    fi
+    # Register that this style is of interest
+    __newt[other_defaults]+=" ${(qqq)1} ${(qqq)2}"
+}
+
+# + Save styles for future invocations {{{1
+__newt_preserve_zstyles () {
+    local -a preserve
+
+    local ctx style val
+    zstyle -g ctx
+    for ctx in ${(M)ctx:#:prompt-theme:newt} \
+               ${(M)ctx:#:prompt-theme:newt:*}
+    do
+        zstyle -g style "$ctx"
+        for style in $style; do
+            [[ $ctx = :prompt-theme:newt && $style = initialized ]] && continue
+            zstyle -a "$ctx" "$style" val
+            val=${(j. .)${(qqq)val}}
+            preserve+="${(qqq)ctx} ${(qqq)style} $val"
+        done
+    done
+
+    for ctx style in ${(z)__newt[other_defaults]}; do
+        zstyle -a ${(Q)ctx} ${(Q)style} val
+        val=${(j. .)${(qqq)val}}
+        preserve+="$ctx $style $val"
+    done
+
+    export _PROMPT_NEWT_ZSTYLES=${(@qq)${preserve}}
+}
+
+# + Restore inherited styles {{{1
+__newt_restore_zstyles () {
+    local style
+
+    if ! zstyle -t :prompt-theme:newt initialized; then
+        for style in ${(Q)${(z)_PROMPT_NEWT_ZSTYLES}}; do
+            style=(${(Q)${(z)style}})
+            zstyle $style
+        done
+    fi
+
+    zstyle :prompt-theme:newt initialized true
 }
 
 
@@ -508,7 +563,7 @@ __newt_fg_color () {
 __newt_terminal_bg () {
     local color
 
-    zstyle -s :prompt-theme terminal-background color
+    zstyle -s :prompt-theme:newt terminal-background color
     : ${color:=${COLORFGBG#*;}}
     : ${color:=black}
     print -n $color
@@ -517,7 +572,7 @@ __newt_terminal_bg () {
 __newt_terminal_fg () {
     local color
 
-    zstyle -s :prompt-theme terminal-foreground color
+    zstyle -s :prompt-theme:newt terminal-foreground color
     : ${color:=${COLORFGBG%%;*}}
     : ${color:=white}
     print -n $color
@@ -811,28 +866,15 @@ prompt_newt_cleanup () {
         unset "functions[$func]"
     done
 
-    local -a vcs_hooks
-    vcs_hooks=("${${(f)$(zstyle -L ':vcs_info:*' hooks)}[@]}")
-    local hook a
-    for hook in $vcs_hooks; do
-        # a=(zstyle :vcs_info:\*+whatever:\* hooks hook-func-1 ...)
-        a=("${(Qz)hook[@]}")
-
-        local i=$#a
-        while ((i > 3)); do
-            [[ $a[$i] = newt-* ]] && a[$i]=()
-            i=$((i-1))
-        done
-
-        # If just (zstyle ':vcs_info:*' hooks), delete the style
-        (( $#a <= 3 )) && a[2,0]=(-d)
-
-        # It is this already. But it makes me feel better to run a
-        # hard-coded command rather than accept outside text
-        a[1]=zstyle
-
-        # Actually run the command
-        $a
+    local ctx hooks
+    zstyle -g ctx
+    for ctx in ${(M)ctx:#:vcs_info:*}; do
+        zstyle -g hooks "$ctx" hooks
+        if (( ${#hooks:#newt[[:punct:]]*} )); then
+            zstyle "$ctx" hooks ${hooks:#newt[[:punct:]]*}
+        else
+            zstyle -d "$ctx" hooks
+        fi
     done
 
     unset __newt
@@ -1033,6 +1075,8 @@ prompt_newt_setup () {
 
     # + Finalization {{{1
 
+    __newt_restore_zstyles
+
     __newt_default left  'history time context notice dir'
     __newt_default right 'vi_mode status exec_time jobs vcs'
 
@@ -1045,13 +1089,16 @@ prompt_newt_setup () {
     __newt_do_segments left  setup
     __newt_do_segments right setup
 
+    __newt_preserve_zstyles
+
     __newt_add_hooks add-zsh-hook '' \
         ${=$(__newt_list_zsh_hooks)}
 
     __newt_add_hooks add-zle-hook-widget zle \
         ${=$(__newt_list_zle_hooks)}
 
-    prompt_cleanup '(( ${+functions[prompt_newt_cleanup]} )) && prompt_newt_cleanup'
+    prompt_cleanup \
+        '(( ${+functions[prompt_newt_cleanup]} )) && prompt_newt_cleanup'
 
     # Shouldn't need this if everything is put in precmd properly
     #prompt_opts=(cr subst percent)

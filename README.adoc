@@ -66,6 +66,8 @@ When `prompt newt` is run with no arguments, or if the first argument
 is `--`, it uses the value of `$PROMPT_NEWT_LOOK` in the environment.
 And it always sets `PROMPT_NEWT_LOOK` to the current settings.
 
+It also takes a snapshot of any zstyle settings that have been set.
+
 This means that, for example, `sudo -Es` will inherit the current look.
 It is possible to add more colors to the current look by following the
 `--` with colors. For example
@@ -246,9 +248,11 @@ Miscellaneous settings
 
     # Tell newt what colors the terminal uses; background is used to
     # draw the arrow head of the segment separator when the default
-    # background (bg '') is used. Also used for the default theme.
-    zstyle ':prompt-theme' terminal-background 236
-    zstyle ':prompt-theme' terminal-foreground 254
+    # background (bg '') is used.
+    #
+    # Also used for the default looks's primary segment colors.
+    zstyle ':prompt-theme:newt' terminal-background 236
+    zstyle ':prompt-theme:newt' terminal-foreground 254
 
     # Keep only the latest the right-side prompt
     setopt TRANSIENT_RPROMPT
