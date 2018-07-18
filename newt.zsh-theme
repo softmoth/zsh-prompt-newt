@@ -599,7 +599,7 @@ __newt_update_prompt () {
     local hook="$2"
 
     #__newt_debug "update_prompt: $hook $side $@"
-    __newt_do_segments $side $hook || return
+    __newt_do_segments $side $hook || return 1
     __newt_assemble_segments $side
 }
 
@@ -828,12 +828,12 @@ __newt_add_hooks () {
 
 __newt_hook () {
     local hook="$1"
-    __newt_update_prompt left  $hook
-    __newt_update_prompt right $hook
+    local did_something=0
+    __newt_update_prompt left  $hook && did_something=1
+    __newt_update_prompt right $hook && did_something=1
 
-    if [[ $hook = zle-* ]]; then
-        zle reset-prompt
-    fi
+    { (( $did_something )) && zle } || return
+    zle reset-prompt
 }
 
 __newt_delete_hooks () {
