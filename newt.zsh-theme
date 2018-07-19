@@ -422,21 +422,37 @@ __newt_default () {
 # + Look up a style {{{1
 __newt_zstyle () {
     local -A opts
-    zparseopts -A opts -D - d: x
-    local look="${@[-1]}"
+    zparseopts -A opts -D - d: m x
+    local style="${@[-1]}"
     local ctx=($__newt[ctx] "${@[1,-2]}")
 
     local val; unset val
+    local merge
     # See if a setting is defined
-    zstyle -t ${(j.:.)ctx} "$look"
+    zstyle -t ${(j.:.)ctx} "$style"
     if [[ $? -ne 2 ]]; then
-        zstyle -s ${(j.:.)ctx} "$look" val
-    else
+        zstyle -s ${(j.:.)ctx} "$style" val
+        if (( $+opts[-m] )); then
+            merge=( ${=val} )
+            relative=${#${(M)merge:#[+-]*}}
+            if (( !relative )); then
+                # Nothing to merge, just use val as is
+                merge=()
+            elif (( relative == $#merge )); then
+                # All parts are relative, put defaults at the front
+                merge[1,0]='*'
+            fi
+            local star=${#${(M)merge:#\*}}
+            (( star )) && unset val
+        fi
+    fi
+
+    if (( ! $+val )); then
         # If -x option, then do a simplified wildcard search through
         # the defaults. Say context is a b c, then this will check for
         # "a b c", "a b *", "a * *", "* * *", and use the first match.
         # If not -x option, then only look for a full "a b c" match.
-        ctx=( $ctx[2,-1] $look )
+        ctx=( $ctx[2,-1] $style )
         local i
         (( $+opts[-x] )) && i=$(($#ctx - 1)) || i=0
         while true; do
@@ -450,6 +466,44 @@ __newt_zstyle () {
             i=$((i - 1))
         done
         (( $+val )) || val=$opts[-d]
+    fi
+
+    if (( $#merge )); then
+        local -a drop
+        local keep=()
+        local star=
+        local tmp
+        local i=0
+        while (( i < $#merge )); do
+            i=$((i+1))
+            case $merge[$i] in
+            -* )
+                tmp=${merge[$i]#-}
+                drop+=$tmp
+                ;;
+            +* )
+                tmp=${merge[$i]#+}
+                # Keep the value
+                keep+=$tmp
+                # And also mark it to be removed from *
+                drop+=$tmp
+                ;;
+            \* )
+                # Only recognize one *, any others get ignored
+                if (( ! star )); then
+                    keep+=$merge[$i]
+                    star=$#keep
+                fi
+                ;;
+            * )
+                keep+=$merge[$i]
+                ;;
+            esac
+        done
+        #__newt_debug "keep [" ${(qq)keep} "] * [" ${(qq)val} "] - drop [" ${(qq)drop} "]"
+        (( star )) && keep[$star]=( ${${=val}:|drop} )
+        val="$keep"
+        #__newt_debug "    = $val"
     fi
     print -rn $val
 }
@@ -598,7 +652,6 @@ __newt_update_prompt () {
     local side="$1"
     local hook="$2"
 
-    #__newt_debug "update_prompt: $hook $side $@"
     __newt_do_segments $side $hook || return 1
     __newt_assemble_segments $side
 }
@@ -722,7 +775,7 @@ __newt_assemble_segments () {
     local b1 f1
     while ((i < $#content)); do
         i=$((i+1))
-        __newt_debug "$i:$segment[i] - (${(q)content[i]}) b(${(q)bg[i]}) f(${(q)fg[$i]}) s(${(q)sep[$i]})"
+        #__newt_debug "$i:$segment[i] - (${(q)content[i]}) b(${(q)bg[i]}) f(${(q)fg[$i]}) s(${(q)sep[$i]})"
 
         # +++ Colors for the segment body {{{1
         b1=$(__newt_bg_color "$bg[$i]")
@@ -769,7 +822,7 @@ __newt_assemble_segments () {
             [[ $f0 == $f1 ]] || result+=$f1
             f0=$f1
             local index=$(( 1 + 2 * thin + sep_direction ))
-            __newt_debug "+ sep index $index thin($thin) sep_dir($sep_direction)"
+            #__newt_debug "+ sep index $index thin($thin) sep_dir($sep_direction)"
             result+=${separators[$index]}
         fi
     done
@@ -778,8 +831,6 @@ __newt_assemble_segments () {
 
     # Change %F{RRR;GGG;BBB} to TrueColor escapes
     result=$(__newt_truecolor_escape "$result")
-
-    __newt_debug "$side = [${(q)result}]"
 
     [[ $side = left ]] && PS1=$result || RPS1=$result
 }
@@ -976,11 +1027,11 @@ EOF
 
 Use a look with `prompt newt meadow`.
 
-Create a `bespoke` look with `prompt newt bespoke blue white magenta`,
-giving a name and a list of colors. Each color can be
+Create an `adhoc` look with `prompt newt adhoc blue white magenta`, giving a
+name and a list of colors.
 
-Every part of the prompt can be configured individually. See the full
-documentation for details:
+Each part of the prompt can be configured. See the full documentation for
+details:
 
         https://github.com/softmoth/zsh-prompt-newt/#readme
 EOF
@@ -1080,8 +1131,8 @@ prompt_newt_setup () {
     __newt_default left  'history time context notice dir'
     __newt_default right 'vi_mode status exec_time jobs vcs'
 
-    __newt[left]=$(__newt_zstyle  left)
-    __newt[right]=$(__newt_zstyle right)
+    __newt[left]=$(__newt_zstyle  -m left)
+    __newt[right]=$(__newt_zstyle -m right)
 
     __newt_default \*      \*        bg "$__newt[color1]"
     __newt_default \*      \*        fg "$__newt[color2]"
@@ -1107,7 +1158,6 @@ prompt_newt_setup () {
 }
 
 #__newt_debug () { print -r "$(date) $@" >> /tmp/zsh-debug-newt.log 2>&1 }
-__newt_debug () { :; }
 
 [[ -o kshautoload ]] || prompt_newt_setup "$@"
 

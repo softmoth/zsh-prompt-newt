@@ -122,11 +122,22 @@ Segments
 
 The segments used for left and right prompts can be set with:
 
-    zstyle ':prompt-theme:newt:*' left time context dir
+    zstyle ':prompt-theme:newt:*' left  history time context dir
     zstyle ':prompt-theme:newt:*' right vi_mode status exec_time jobs vcs
 
 This change requires the prompt to be set up again. Run `prompt newt`
 for the change to take effect.
+
+The values shown above are default. It is also possible to modify the
+default settings, adding or removing individual segments, with:
+
+----
+# left gets: time context dir vcs
+zstyle ':prompt-theme:newt:*' left  -history +vcs
+
+# right gets: prompt_time vi_mode status vcs exec_time
+zstyle ':prompt-theme:newt:*' right '+prompt_time -jobs * +exec_time'
+----
 
 ### `context`: User and host name
 
