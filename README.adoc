@@ -82,16 +82,30 @@ That is equivalent to
 Styling
 -------
 
-Segments can be configured with the context
+This theme uses the ZSH configuration system, called _zstyle_, to specify
+the look and behavior of the prompt. It is documented in the `zshmodules(1)`
+manual page. Briefly, a _style_ is a configuration setting, which is looked
+up in a _context_. In the English phrase "Give me the background color for
+the `time` segment in the `default` state, using the `forest` look," the
+_style_ being requested is "background color", and the _context_ is the
+`forest`, `time` segment, `default` state.
+
+When you specify a style, often the context you provide will be a pattern
+with wildcards in it. For example, you can specify the background color
+for the time segment's default state in _any_ look with:
+
+    zstyle :prompt-theme:newt:*:time:default bg yellow
+
+So, in general, segments can be configured with the context
 `:prompt-theme:newt:LOOK:SEGMENT:STATE`.
 
 _Look_ can be any word you like, except for a color name (`red`, `_`,
 etc.). You can call `prompt newt LOOK` to use a particular look.
 
 If just `prompt newt` is run, the look is inherited from the
-`$PROMPT_NEWT_LOOK` environment variable, or `default`.
+`$PROMPT_NEWT_LOOK` environment variable, or is `default`.
 
-_Segment_ is the name of the segment, e.g., `vcs` or `dir`.
+_Segment_ is the name of the segment, e.g., `dir` or `time`.
 
 _State_ is segment-specific, and is `default` for most segments
 most of the time.
@@ -236,6 +250,27 @@ Text and colors can be changed. For example:
     zstyle ':prompt-theme:newt:*:vi_mode' vicmd NORMAL
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
+
+Separators
+----------
+:nerd-fonts: https://nerdfonts.com/
+
+The theme uses Powerline arrows to separate segments by default. It also has
+built-in support for separator characters from the {nerd-fonts}[Nerd Fonts]
+Powerline Extended set. Request the round half-circle separators with:
+
+    zstyle ':prompt-theme:newt:*:*:*' separator nerd-round
+
+The defined separators are: `powerline`, `nerd-round`, `nerd-backward`,
+`nerd-forward`, `nerd-flame`, `nerd-pixel`, `nerd-spectrum`.
+
+To add your own separator, run `prompt_newt_add_separator` after loading
+this theme:
+
+    prompt_newt_separator nerd-trapezoid $'\ue0d2' $'\ue0d4'
+
+The arguments are _name_, _left-to-right thick_, _left-to-right thin_,
+_right-to-left thick_, and _right-to-left thin_.
 
 Truecolor support
 -----------------

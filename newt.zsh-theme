@@ -646,6 +646,25 @@ __newt_truecolor_escape () {
 }
 
 
+# Defining separators {{{1
+
+prompt_newt_add_separator () {
+    local name="$1"
+    shift
+    # Left-to-right thick
+    __newt[separator-${name}-0]="$1"
+    # Left-to-right thin
+    __newt[separator-${name}-1]="${2-$1}"
+    # Right-to-left thick
+    __newt[separator-${name}-2]="${3-$1}"
+    # Right-to-left thin
+    __newt[separator-${name}-3]="${4-$3}"
+
+    # Set the default separator style to the first one defined
+    (( $+__newt[default-separator] )) || __newt[default-separator]=$name
+}
+
+
 # Update prompt strings {{{1
 
 __newt_update_prompt () {
@@ -683,22 +702,13 @@ __newt_assemble_segments () {
     # should be drawn. stack == 0 is the input line.
     local stack=0
 
-    # TODO Make this configurable, and add more separators to it
-    separators=(
-        # Powerline
-        $'\ue0b0'  #  Left-to-right, solid (when new background)
-        $'\ue0b2'  #  Right-to-left, solid
-        $'\ue0b1'  #  Left-to-right, thin (when same background)
-        $'\ue0b3'  #  Right-to-left, thin
-    )
-
     # ++ Fill in arrays holding values for active segments {{{1
-    local -a segment content bg fg sep
+    local -a segment content bg fg sep sepdir
 
     local padding
     zstyle -t $__newt[ctx] compact && padding= || padding=' '
 
-    local seg state
+    local seg state tmp
     for seg in "${=__newt[$side]}"; do
         [[ -n ${__newt[+${seg}+]} || $__newt[+${seg}+show_empty] = 1 ]] \
             || continue
@@ -708,11 +718,14 @@ __newt_assemble_segments () {
         state=${__newt[+${seg}+state]:-default}
         bg+=$(__newt_zstyle -x "$seg" "$state" bg)
         fg+=$(__newt_zstyle -x "$seg" "$state" fg)
+        sep+=$(__newt_zstyle -x -d $__newt[default-separator] \
+                    "$seg" "$state" separator)
 
-        sep+=0  # For now, all user segments are normal
+        tmp=$(__newt_zstyle -x "$seg" "$state" direction)
+        [[ $tmp = reverse ]] && sepdir+=1 || sepdir+=0
 
-        # Pre-process the content a bit to add spacing, etc.
-        local tmp="${__newt[+${seg}+]}"
+        # Pre-process the content a bit
+        tmp="${__newt[+${seg}+]}"
 
         # Replace %k and %f with segment bg and fg colors
         # NB: This doesn't use zformat because that will gobble up other formats
@@ -739,7 +752,8 @@ __newt_assemble_segments () {
             content+=' '
             bg+=
             fg+=
-            sep+=-1
+            sep+=''
+            sepdir+=0
         fi
     else
         # This is a right-to-left prompt, so the separator precedes the
@@ -753,7 +767,8 @@ __newt_assemble_segments () {
         fg[1,0]=
 
         # Then add a null separator at the end, to finish the last segment
-        sep+=-1
+        sep+=''
+        sepdir+=0
 
         # Remove a trailing space to account for $ZLE_RPROMPT_INDENT, and
         # extend the current background color to the end of the line
@@ -764,7 +779,8 @@ __newt_assemble_segments () {
         content+=$'%{\e[0m%}'
         bg+=
         fg+=
-        sep+=-1
+        sep+=''
+        sepdir+=0
     fi
 
     # ++ Gather the arrays into a prompt string {{{1
@@ -789,18 +805,18 @@ __newt_assemble_segments () {
         result+=$content[$i]
 
         # +++ The separator {{{1
-        if (( ${sep[$i]} >= 0 )); then
+        if [[ -n ${sep[$i]} ]]; then
             if (( $i >= $#content )); then
                 print "IMPOSSIBLE, index $i has a separator (${(qq)sep[$i]}) off the end ($#content)" >&2
                 bg[$i+1]=196
                 fg[$i+1]=220
             fi
 
-            # The sep[i] is 0 for "normal" direction (points right on a left-
-            # hand prompt, and points left on a right-hand prompt). It is 1
-            # for a reversed separator. So XOR of prompt direction and sep[i]
-            # gives the direction of the separator itself.
-            local sep_direction=$((direction ^ ${sep[$i]}))
+            # The sepdir[i] is 0 for "normal" direction (points right on a
+            # left-hand prompt, and points left on a right-hand prompt). It
+            # is 1 for a reversed separator. So XOR of prompt direction and
+            # sepdir[i] gives the direction of the separator itself.
+            local sep_direction=$((direction ^ ${sepdir[$i]}))
             if [[ $bg[$i] = $bg[$i+1] ]]; then
                 local thin=1
                 b1=$(__newt_bg_color "$bg[$i]")
@@ -817,13 +833,18 @@ __newt_assemble_segments () {
                 f1=$(__newt_fg_color "bg:$bg[$i+$sep_direction]")
                 b1=$(__newt_bg_color "$bg[$i+$((sep_direction ^ 1))]")
             fi
+
             [[ $b0 == $b1 ]] || result+=$b1
             b0=$b1
             [[ $f0 == $f1 ]] || result+=$f1
             f0=$f1
-            local index=$(( 1 + 2 * thin + sep_direction ))
-            #__newt_debug "+ sep index $index thin($thin) sep_dir($sep_direction)"
-            result+=${separators[$index]}
+
+            local sep_style=$sep[$i]
+            (( $+__newt[(e)separator-${sep_style}-0] )) \
+                || sep_style=$__newt[default-separator]
+            local index=$(( 2 * sep_direction + thin ))
+            #__newt_debug "+ sep $index style($sep_style) direction($sep_direction) thin($thin)"
+            result+=$__newt[(e)separator-${sep_style}-${index}]
         fi
     done
 
@@ -1123,6 +1144,23 @@ prompt_newt_setup () {
     $0-set-colors "${(Q)look[2,-1][@]}"
 
     unfunction $0-set-colors
+
+    # + Separators {{{1
+
+    prompt_newt_add_separator powerline \
+            $'\ue0b0' $'\ue0b1' $'\ue0b2' $'\ue0b3' #    
+    prompt_newt_add_separator nerd-round \
+            $'\ue0b4' $'\ue0b5' $'\ue0b6' $'\ue0b7' #    
+    prompt_newt_add_separator nerd-backward \
+            $'\ue0b8' $'\ue0b9' $'\ue0ba' $'\ue0bb' #    
+    prompt_newt_add_separator nerd-forward \
+            $'\ue0bc' $'\ue0bd' $'\ue0be' $'\ue0bf' #    
+    prompt_newt_add_separator nerd-flame \
+            $'\ue0c0' $'\ue0c1' $'\ue0c2' $'\ue0c3' #    
+    prompt_newt_add_separator nerd-pixel \
+            $'\ue0c4' $'\ue0c6' $'\ue0c5' $'\ue0c7' #    
+    prompt_newt_add_separator nerd-spectrum \
+            $'\ue0c8' $'\ue0c8' $'\ue0ca' $'\ue0ca' #    
 
     # + Finalization {{{1
 
