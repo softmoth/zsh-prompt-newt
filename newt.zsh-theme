@@ -288,7 +288,7 @@ __newt+vi_mode+setup () {
     __newt_default vi_mode vline   $vary  "$__newt[color-blue]"
 }
 
-__newt+vi_mode+zle-keymap-select   () { __newt+vi_mode+hook "$@" }
+__newt+vi_mode+precmd              () { __newt+vi_mode+hook "$@" }
 __newt+vi_mode+zle-isearch-update  () { __newt+vi_mode+hook "$@" }
 __newt+vi_mode+zle-isearch-exit    () { __newt+vi_mode+hook "$@" }
 __newt+vi_mode+zle-line-pre-redraw () { __newt+vi_mode+hook "$@" }
@@ -300,10 +300,14 @@ __newt+vi_mode+hook () {
         viins|vicmd|replace|isearch|visual|vline) ;;
         main|*) mode=viins ;;
     esac
-    [[ $mode = $__newt[+vi_mode+state] ]] && return 1
+
+    local str=$(__newt_zstyle vi_mode $mode)
+    [[ $mode = $__newt[+vi_mode+state] && $str = $__newt[+vi_mode+] ]] \
+        && return 1
+
     #__newt_debug "       + ${__newt[+vi_mode+state]} -> $mode"
     __newt[+vi_mode+state]=$mode
-    __newt[+vi_mode+]=$(__newt_zstyle vi_mode $mode)
+    __newt[+vi_mode+]=$str
 }
 
 # VCS_Info hooks for git {{{1
