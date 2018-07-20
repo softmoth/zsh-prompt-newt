@@ -649,8 +649,11 @@ __newt_truecolor_escape () {
 # Defining separators {{{1
 
 prompt_newt_add_separator () {
+    local -A opts
+    zparseopts -A opts -D - -wide: -wide-ltr: -wide-rtl:
     local name="$1"
     shift
+
     # Left-to-right thick
     __newt[separator-${name}-0]="$1"
     # Left-to-right thin
@@ -659,6 +662,13 @@ prompt_newt_add_separator () {
     __newt[separator-${name}-2]="${3-$1}"
     # Right-to-left thin
     __newt[separator-${name}-3]="${4-$3}"
+
+    (( $+opts[--wide] )) \
+        && __newt[(e)separator-${name}-wide]=$opts[--wide]
+    (( $+opts[--wide-ltr] )) \
+        && __newt[(e)separator-${name}-wide-ltr]=$opts[--wide-ltr]
+    (( $+opts[--wide-rtl] )) \
+        && __newt[(e)separator-${name}-wide-rtl]=$opts[--wide-rtl]
 
     # Set the default separator style to the first one defined
     (( $+__newt[default-separator] )) || __newt[default-separator]=$name
@@ -789,6 +799,7 @@ __newt_assemble_segments () {
     local i=0
     local b0=%k f0=%f
     local b1 f1
+    local wide
     while ((i < $#content)); do
         i=$((i+1))
         #__newt_debug "$i:$segment[i] - (${(q)content[i]}) b(${(q)bg[i]}) f(${(q)fg[$i]}) s(${(q)sep[$i]})"
@@ -834,17 +845,39 @@ __newt_assemble_segments () {
                 b1=$(__newt_bg_color "$bg[$i+$((sep_direction ^ 1))]")
             fi
 
-            [[ $b0 == $b1 ]] || result+=$b1
-            b0=$b1
-            [[ $f0 == $f1 ]] || result+=$f1
-            f0=$f1
-
             local sep_style=$sep[$i]
             (( $+__newt[(e)separator-${sep_style}-0] )) \
                 || sep_style=$__newt[default-separator]
             local index=$(( 2 * sep_direction + thin ))
             #__newt_debug "+ sep $index style($sep_style) direction($sep_direction) thin($thin)"
-            result+=$__newt[(e)separator-${sep_style}-${index}]
+            local separator=$__newt[(e)separator-${sep_style}-${index}]
+
+            # Determine special spacing if this separator is extra wide
+            local left=0 right=0
+            if [[ $(__newt_zstyle -d 1 wide-separators) -ne 0 ]]; then
+                (( sep_direction )) \
+                    && wide=$__newt[(e)separator-${sep_style}-wide-rtl] \
+                    || wide=$__newt[(e)separator-${sep_style}-wide-ltr]
+                [[ -z $wide ]] && wide=$__newt[(e)separator-${sep_style}-wide]
+                if [[ -n $wide ]]; then
+                    left=${wide%\:*}
+                    right=${wide#*\:}
+                fi
+                #__newt_debug "$segment[$i] wide($wide) left($left) right($right)"
+            fi
+
+            # Trim preceding segment if separator is wide on the left
+            (( left )) && result=${result% }
+
+            [[ $b0 == $b1 ]] || result+=$b1
+            b0=$b1
+            [[ $f0 == $f1 ]] || result+=$f1
+            f0=$f1
+
+            result+=$separator
+
+            # Pad separator if it is wide on the right
+            (( right )) && result+=' '
         fi
     done
 
@@ -1147,19 +1180,19 @@ prompt_newt_setup () {
 
     # + Separators {{{1
 
-    prompt_newt_add_separator powerline \
+    prompt_newt_add_separator        powerline \
             $'\ue0b0' $'\ue0b1' $'\ue0b2' $'\ue0b3' #    
-    prompt_newt_add_separator nerd-round \
+    prompt_newt_add_separator        nerd-round \
             $'\ue0b4' $'\ue0b5' $'\ue0b6' $'\ue0b7' #    
-    prompt_newt_add_separator nerd-backward \
+    prompt_newt_add_separator --wide 1:1 nerd-backward \
             $'\ue0b8' $'\ue0b9' $'\ue0ba' $'\ue0bb' #    
-    prompt_newt_add_separator nerd-forward \
+    prompt_newt_add_separator --wide 1:1 nerd-forward \
             $'\ue0bc' $'\ue0bd' $'\ue0be' $'\ue0bf' #    
-    prompt_newt_add_separator nerd-flame \
+    prompt_newt_add_separator --wide 1:1 nerd-flame \
             $'\ue0c0' $'\ue0c1' $'\ue0c2' $'\ue0c3' #    
-    prompt_newt_add_separator nerd-pixel \
+    prompt_newt_add_separator        nerd-pixel \
             $'\ue0c4' $'\ue0c6' $'\ue0c5' $'\ue0c7' #    
-    prompt_newt_add_separator nerd-spectrum \
+    prompt_newt_add_separator --wide-rtl 1:1 nerd-spectrum \
             $'\ue0c8' $'\ue0c8' $'\ue0ca' $'\ue0ca' #    
 
     # + Finalization {{{1

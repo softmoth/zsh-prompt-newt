@@ -264,13 +264,27 @@ Powerline Extended set. Request the round half-circle separators with:
 The defined separators are: `powerline`, `nerd-round`, `nerd-backward`,
 `nerd-forward`, `nerd-flame`, `nerd-pixel`, `nerd-spectrum`.
 
+Several of the separators may be drawn as two characters wide. If you are
+using the "Mono" version of a Nerd font, this will create a severe gap after
+the separator. Turn off the compensatory spacing with:
+
+    zstyle ':prompt-theme:newt:*' wide-separators 0
+
+### Defining a custom separator
+
 To add your own separator, run `prompt_newt_add_separator` after loading
 this theme:
 
-    prompt_newt_separator nerd-trapezoid $'\ue0d2' $'\ue0d4'
+    prompt_newt_add_separator nerd-trapezoid \
+                $'\ue0d2' $'\ue0d2' $'\ue0d4' $'\ue0d4'
 
 The arguments are _name_, _left-to-right thick_, _left-to-right thin_,
-_right-to-left thick_, and _right-to-left thin_.
+_right-to-left thick_, and _right-to-left thin_. Additionally, the options
+`--wide`, `--wide-ltr`, and `--wide-rtl` may be given. Each takes a
+specification like `1:1` or `0:1`. The left-hand number is 1 if the padding
+space from the preceding segment should be removed. The right-hand number is
+1 if an extra padding space should be added after the separator. Most wide
+separators will want both set to 1.
 
 Truecolor support
 -----------------
