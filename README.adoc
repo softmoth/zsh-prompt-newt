@@ -2,6 +2,7 @@
 :toc: preamble
 :demo-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 :preview-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
+:separators-demo: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/separators-demo.png
 
 ____
 “She turned me into a newt!” +
@@ -263,6 +264,8 @@ Powerline Extended set. Request the round half-circle separators with:
 
 The defined separators are: `powerline`, `nerd-round`, `nerd-backward`,
 `nerd-forward`, `nerd-flame`, `nerd-pixel`, `nerd-spectrum`.
+
+image::{separators-demo}[Separators demonstration]
 
 Several of the separators may be drawn as two characters wide. If you are
 using the "Mono" version of a Nerd font, this will create a severe gap after
