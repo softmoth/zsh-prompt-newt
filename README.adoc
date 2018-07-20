@@ -262,8 +262,8 @@ Powerline Extended set. Request the round half-circle separators with:
 
     zstyle ':prompt-theme:newt:*:*:*' separator nerd-round
 
-The defined separators are: `powerline`, `nerd-round`, `nerd-backward`,
-`nerd-forward`, `nerd-flame`, `nerd-pixel`, `nerd-spectrum`.
+The defined separators are: `powerline`, `fade`, `nerd-round`, `nerd-backward`,
+`nerd-forward`, `nerd-flame`, `nerd-pixel`, `nerd-waveform`.
 
 image::{separators-demo}[Separators demonstration]
 

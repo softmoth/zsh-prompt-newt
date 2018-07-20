@@ -786,7 +786,7 @@ __newt_assemble_segments () {
 
         # Remove a trailing space to account for $ZLE_RPROMPT_INDENT, and
         # extend the current background color to the end of the line
-        content[-1]="${content[-1]/% /%E}"
+        content[-1]="${content[-1]/% }%E"
 
         # Add a segment to reset colors at end of line
         segment+=end-of-line
@@ -1186,6 +1186,9 @@ prompt_newt_setup () {
 
     prompt_newt_add_separator        powerline \
             $'\ue0b0' $'\ue0b1' $'\ue0b2' $'\ue0b3' #    
+    prompt_newt_add_separator        fade \
+            $'\u2593\u2592\u2591' $'\u250a' \
+            $'\u2591\u2592\u2593' $'\u250a'  # ▓▒░ ┊ (█)
     prompt_newt_add_separator        nerd-round \
             $'\ue0b4' $'\ue0b5' $'\ue0b6' $'\ue0b7' #    
     prompt_newt_add_separator --wide 1:1 nerd-backward \
@@ -1196,7 +1199,7 @@ prompt_newt_setup () {
             $'\ue0c0' $'\ue0c1' $'\ue0c2' $'\ue0c3' #    
     prompt_newt_add_separator        nerd-pixel \
             $'\ue0c4' $'\ue0c6' $'\ue0c5' $'\ue0c7' #    
-    prompt_newt_add_separator --wide-rtl 1:1 nerd-spectrum \
+    prompt_newt_add_separator --wide-rtl 1:1 nerd-waveform \
             $'\ue0c8' $'\ue0c8' $'\ue0ca' $'\ue0ca' #    
 
     # + Finalization {{{1

@@ -5,6 +5,8 @@ zstyle ':prompt-theme:newt:*:vi_mode' viins 'INS'
 zstyle ':prompt-theme:newt:*:status' ok $'\u2713'
 sleep 999&
 :
+zstyle ':prompt-theme:newt:*:*:*' separator fade
+:
 zstyle ':prompt-theme:newt:*:*:*' separator nerd-round
 :
 zstyle ':prompt-theme:newt:*:*:*' separator nerd-backward
@@ -15,7 +17,7 @@ zstyle ':prompt-theme:newt:*:*:*' separator nerd-flame
 :
 zstyle ':prompt-theme:newt:*:*:*' separator nerd-pixel
 :
-zstyle ':prompt-theme:newt:*:*:*' separator nerd-spectrum
+zstyle ':prompt-theme:newt:*:*:*' separator nerd-waveform
 :
 zstyle ':prompt-theme:newt:*:*:*' separator powerline
 :
