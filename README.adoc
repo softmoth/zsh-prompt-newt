@@ -270,6 +270,14 @@ the separator. Turn off the compensatory spacing with:
 
     zstyle ':prompt-theme:newt:*' wide-separators 0
 
+A segment's separator can be reversed, so its arrow points in rather than
+out:
+
+    # Reverse all segments
+    zstyle ':prompt-theme:newt:*:*:*' direction reverse
+    # Or just one
+    zstyle ':prompt-theme:newt:*:history:*' direction reverse
+
 ### Defining a custom separator
 
 To add your own separator, run `prompt_newt_add_separator` after loading
