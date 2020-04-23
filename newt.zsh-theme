@@ -242,7 +242,7 @@ __newt+vcs+setup () {
 }
 
 __newt+vcs+precmd () {
-    vcs_info
+    vcs_info 2> /dev/null
 
     if (( $+__newt[+vcs+clobber] )); then
         __newt[+vcs+state]=clobbered
