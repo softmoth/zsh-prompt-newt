@@ -1063,8 +1063,9 @@ prompt_newt_preview () {
         __newt_preview_look $=look
     done
 
+    # promptinit doesn't handle cleanup after showing preview
+    [[ $prompt_theme[1] = newt ]] || prompt_newt_cleanup
     unfunction __newt_preview_show __newt_preview_look
-    prompt_newt_cleanup
 }
 
 
@@ -1094,7 +1095,7 @@ details:
         https://github.com/softmoth/zsh-prompt-newt/#readme
 EOF
 
-    # promptinit doesn't handle cleanup
+    # promptinit doesn't handle cleanup after loading help
     [[ $prompt_theme[1] = newt ]] || prompt_newt_cleanup
 }
 
@@ -1226,8 +1227,9 @@ prompt_newt_setup () {
     __newt_add_hooks add-zle-hook-widget zle \
         ${=$(__newt_list_zle_hooks)}
 
-    prompt_cleanup \
-        '(( ${+functions[prompt_newt_cleanup]} )) && prompt_newt_cleanup'
+    [[ $(zstyle -L :prompt-theme cleanup) = *prompt_newt_cleanup* ]] \
+        || prompt_cleanup \
+            '(( ${+functions[prompt_newt_cleanup]} )) && prompt_newt_cleanup'
 
     # Shouldn't need this if everything is put in precmd properly
     #prompt_opts=(cr subst percent)
