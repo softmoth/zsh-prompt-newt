@@ -25,7 +25,7 @@ These looks are simply shorthand for the `zstyle` configuration, as
 described in <<Styling>>. So the look can be used to get most
 things as you like, and then individual elements can be refined further.
 
-### Custom looks
+=== Custom looks
 
 Create an `adhoc` look with `prompt newt adhoc blue white magenta`,
 giving a name and a list of colors. Each color can be
@@ -36,7 +36,7 @@ giving a name and a list of colors. Each color can be
 - `''` or `_`, meaning the terminal's default background / foreground, or
 - `none`, meaning do not set the color, use whatever is already active
 
-### Colors indexes
+=== Colors indexes
 
 The list of colors is
 
@@ -61,7 +61,7 @@ background:
 
     prompt newt forest 161 227
 
-### Re-running `prompt newt`
+=== Re-running `prompt newt`
 
 When `prompt newt` is run with no arguments, or if the first argument
 is `--`, it uses the value of `$PROMPT_NEWT_LOOK` in the environment.
@@ -80,8 +80,7 @@ It is possible to add more colors to the current look by following the
 That is equivalent to
 `prompt newt example blue white green black red yellow`.
 
-Styling
--------
+== Styling
 
 This theme uses the ZSH configuration system, called _zstyle_, to specify
 the look and behavior of the prompt. It is documented in the `zshmodules(1)`
@@ -116,7 +115,7 @@ Your custom overrides can be shown with `zstyle -L ':prompt-theme:newt:*'`.
 To remove an override, run
 `zstyle -d ':prompt-theme:newt:*:the:pattern' [look]`.
 
-### Examples
+=== Examples
 
     zstyle ':prompt-theme:newt:*:vcs:*'          bg blue
     zstyle ':prompt-theme:newt:*:vcs:*'          fg yellow
@@ -132,8 +131,7 @@ To remove an override, run
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
     zstyle ':prompt-theme:newt:*' right none
 
-Segments
---------
+== Segments
 
 The segments used for left and right prompts can be set with:
 
@@ -154,20 +152,20 @@ zstyle ':prompt-theme:newt:*' left  -history +vcs
 zstyle ':prompt-theme:newt:*' right '+prompt_time -jobs * +exec_time'
 ----
 
-### `context`: User and host name
+=== `context`: User and host name
 
 User name is hidden unless it is different from `$DEFAULT_USER`.
 
 Host name is hidden unless `$SSH_CLIENT` is set.
 
-### `dir`: Current directory
+=== `dir`: Current directory
 
 It uses the `'%4~'` zsh format by default, which shows nested directories
 to four levels. Set the format with
 
     zstyle :prompt-theme:newt:\*:dir default '%/'
 
-### `exec_time`: Execution time
+=== `exec_time`: Execution time
 
 The states are `default` and `long`.
 
@@ -193,29 +191,29 @@ threshold are not shown). The format can be set with:
     # %t: human-friendly
     zstyle ':prompt-theme:newt:*:exec_time' default '🕑%t'
 
-### `history`: History number
+=== `history`: History number
 
-### `jobs`: Background jobs
+=== `jobs`: Background jobs
 
 States are `default` and `zero`. The `zero` state defaults to empty, so
 when there are no background jobs, nothing is shown. The `default` state
 shows an icon and, if there is more than one job, the number of jobs.
 Run `prompt_newt_defaults` to see the full setting.
 
-### `none`: Placeholder to do nothing
+=== `none`: Placeholder to do nothing
 
 This might be used to disable the right side prompt, for example:
 
     zstyle ':prompt-theme:newt:*' right none
 
-### `prompt_time`: Prompt time
+=== `prompt_time`: Prompt time
 
 Displays how long it takes for the prompt itself to be drawn. This
 segment is off by default. The precision can be set with
 
     zstyle ':prompt-theme:newt:*:prompt_time' precision 3
 
-### `status`: Exit status
+=== `status`: Exit status
 
 The `status` segment states are `ok`, `error` and `suspended`. By default
 only `error` status is shown. To always show a status, set:
@@ -223,13 +221,13 @@ only `error` status is shown. To always show a status, set:
     zstyle ':prompt-theme:newt:*:status' ok        $'\u2713' # ✓
     zstyle ':prompt-theme:newt:*:status' suspended $'\u25c6' # ◆
 
-### `time`: Time
+=== `time`: Time
 
 Shows the current time. The format can be set with
 
     zstyle ':prompt-theme:newt:*:time' default '%*'  # HH:MM:SS
 
-### `vcs`: Version control
+=== `vcs`: Version control
 
 States are `clobbered`, `root`, `action`, `dirty` and `default`. Most of
 the display is controlled by _`vcs_info`_:
@@ -238,7 +236,7 @@ the display is controlled by _`vcs_info`_:
     zstyle ':vcs_info:*' enable git cvs svn bzr hg
     zstyle -L ':vcs_info:*'
 
-### `vi_mode`: Vi mode
+=== `vi_mode`: Vi mode
 :zsh-vim-mode: https://github.com/softmoth/zsh-vim-mode[vim-mode]
 
 States are `viins`, `vicmd`, `replace`, `isearch`, `visual` and `vline`.
@@ -252,8 +250,7 @@ Text and colors can be changed. For example:
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
 
-Separators
-----------
+== Separators
 :nerd-fonts: https://nerdfonts.com/
 
 The theme uses Powerline arrows to separate segments by default. It also has
@@ -281,7 +278,7 @@ out:
     # Or just one
     zstyle ':prompt-theme:newt:*:history:*' direction reverse
 
-### Defining a custom separator
+=== Defining a custom separator
 
 To add your own separator, run `prompt_newt_add_separator` after loading
 this theme:
@@ -297,8 +294,7 @@ space from the preceding segment should be removed. The right-hand number is
 1 if an extra padding space should be added after the separator. Most wide
 separators will want both set to 1.
 
-Truecolor support
------------------
+== Truecolor support
 :truecolor: https://gist.github.com/XVilka/8346728
 
 If your terminal {truecolor}[supports Truecolor escape sequences],
@@ -311,8 +307,7 @@ either in a `zstyle` to set a color, or directly in a `%K{...}` or
     zstyle ':prompt-theme:newt:*:vi_mode:search' bg '199;21;133'
 
 
-Miscellaneous settings
-----------------------
+== Miscellaneous settings
 
     # Remove spacing around segments
     zstyle ':prompt-theme:newt:*' compact true
