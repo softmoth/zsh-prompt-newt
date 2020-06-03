@@ -3,6 +3,7 @@
 :demo-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-demo.png
 :preview-image: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/newt-preview.png
 :separators-demo: https://gist.githubusercontent.com/softmoth/2910577d28970c80b58f8b55c34d58c1/raw/separators-demo.png
+:issues: https://github.com/softmoth/zsh-prompt-newt/issues
 
 ____
 “She turned me into a newt!” +
@@ -11,6 +12,28 @@ ____
 ____
 
 image::{demo-image}[Newt Theme Demo]
+
+
+== Installation
+
+This is a sample `.zshrc`. Your plugin manager may have features which
+automate integrating prompt themes.
+
+    # Optional Newt theme settings
+    DEFAULT_USER=jdoe
+    : ${PROMPT_NEWT_LOOK=mono}
+    zstyle :prompt-theme:newt:\* left time context dir
+
+    # This enables promptinit to find prompt_newt_setup
+    # See PROMPT THEMES in zshcontrib(1)
+    fpath+=~/path/to/repos/zsh-prompt-newt
+
+    autoload -Uz promptinit; promptinit
+    prompt newt
+
+Please {issues}[open an issue] if you have installation tips that may help
+others.
+
 
 == Looks
 
@@ -80,6 +103,7 @@ It is possible to add more colors to the current look by following the
 That is equivalent to
 `prompt newt example blue white green black red yellow`.
 
+
 == Styling
 
 This theme uses the ZSH configuration system, called _zstyle_, to specify
@@ -130,6 +154,7 @@ To remove an override, run
     # Only use the left prompt
     zstyle ':prompt-theme:newt:*' left time context status jobs vcs dir
     zstyle ':prompt-theme:newt:*' right none
+
 
 == Segments
 
@@ -250,6 +275,7 @@ Text and colors can be changed. For example:
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' bg 202
     zstyle ':prompt-theme:newt:*:vi_mode:vicmd' fg 235
 
+
 == Separators
 :nerd-fonts: https://nerdfonts.com/
 
@@ -294,6 +320,7 @@ space from the preceding segment should be removed. The right-hand number is
 1 if an extra padding space should be added after the separator. Most wide
 separators will want both set to 1.
 
+
 == Truecolor support
 :truecolor: https://gist.github.com/XVilka/8346728
 
@@ -322,3 +349,8 @@ either in a `zstyle` to set a color, or directly in a `%K{...}` or
 
     # Keep only the latest the right-side prompt
     setopt TRANSIENT_RPROMPT
+
+
+== Bugs
+
+Please {issues}[open an issue] if you run into any bugs or missing features.
